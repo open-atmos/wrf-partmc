@@ -1,0 +1,3 @@
+
+FC = mpif90
+FFLAGS = -g -Idatamodules -Jdatamodules

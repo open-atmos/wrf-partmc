@@ -1,0 +1,83 @@
+# WRF created include files #
+*.inc
+# WRF automated f90 files #
+*.f90
+# Compiled source #
+*.mod
+*.o
+*.exe
+# Compiled python #
+*.pyc
+# log files #
+*.log
+slurm*
+# WRF rsl files
+rsl*
+# debug files
+gout*
+# WRF meteorology files
+met_em*
+geo_em*
+# WRF output files
+wrfout*
+*00:00
+# WRF backup namelists
+namelist.input.backup*
+# WPS
+GRIBFILE*
+FILE*
+#
+WRFV3/external/esmf_time_f90/*.f
+WRFV3/external/io_netcdf/*.f
+WRFV3/external/io_netcdf/diffwrf
+WRFV3/external/io_int/*.f
+WRFV3/external/RSL_LITE/*.f
+#
+*.a
+*.tar.gz
+#
+wrfchemi*
+wrfem*
+wrfinput*
+wrfbdy*
+# The real files are in the WRFV3/run dir
+WRFV3/test/em_real/*.TBL
+WRFV3/test/em_real/CAM*
+WRFV3/test/em_real/*.formatted
+WRFV3/test/em_real/*.asc
+WRFV3/test/em_real/*DATA
+WRFV3/test/em_real/CCN_ACTIVATE.BIN
+WRFV3/test/em_real/ETAMPNEW_DATA.expanded_rain
+WRFV3/test/em_real/README.namelist
+WRFV3/test/em_real/batch_real.sh
+WRFV3/test/em_real/bulkdens.asc_s_0_03_0_9
+WRFV3/test/em_real/bulkradii.asc_s_0_03_0_9
+WRFV3/test/em_real/grib2map.tbl
+WRFV3/test/em_real/gribmap.txt
+WRFV3/test/em_real/kernels.asc_s_0_03_0_9
+WRFV3/test/em_real/namelist.input
+WRFV3/test/em_real/p3_lookup_table_1.dat
+WRFV3/test/em_real/tr49t67
+WRFV3/test/em_real/tr49t85
+WRFV3/test/em_real/tr67t85
+# Any folder named figures
+figures/
+*.pdf
+# Any netcdf files
+*.nc
+# generated files that should not be tracked
+WRFV3/frame/module_dm.F
+configure.wrf
+WRFV3/Registry/Registry
+WRFV3/Registry/Registry.backup
+WRFV3/configure.wrf.backup
+WRFV3/external/io_int/diffwrf
+WRFV3/external/io_int/io_int_idx_tags.h
+WRFV3/external/io_int/test_io_idx
+WRFV3/frame/module_state_description.F
+WRFV3/inc/dm_comm_cpp_flags
+WRFV3/inc/wrf_io_flags.h
+WRFV3/inc/wrf_status_codes.h
+WRFV3/run/namelist.input
+WRFV3/tools/gen_comms.c
+WRFV3/tools/registry

@@ -1,0 +1,35 @@
+Configuring and building WRF-PartMC
+-----------------------------------
+
+
+
+git clone https://github.com/jcurtis2/wrf_partmc.git
+git submodule update --init partmc
+
+If you have access to mosaic,
+
+git submodule update --init mosaic
+
+To compile with MOSAIC, set the environmental variable
+
+   export MOSAIC=1
+
+
+Description of the directories:
+
+- WPS is the WRF preprocessor that creates the inputs for WRF (version 3.9.1)
+- WRF is the meteorology model and is a modified version of 3.9.1.
+    NOTE: WPS and WRF should match in version number.
+- PartMC is a branch named wrf_partmc. Changes on this branch will be merged to
+    master at a later date with preprocessor directive PMC_USE_WRF
+- mozbc/ takes wrfinput and wrfbdy from ./real.exe and populates these files with
+    values from the MOZART output.
+- emissions/ contains the program to create WRF-PartMC emissions from SMOKE
+    source-apportioned data
+- boundary_and_initial_conditions/ contains programs to create initial and
+    boundary conditions from the wrfinput and wrfbdy files using MOZART global
+    model output.
+- interface/ is all the code required to interface WRF with PartMC
+- mosaic/ is the chemistry code
+- scenarios/ contains any future scenarios developed
+- gridding/ includes methods for aligning grids

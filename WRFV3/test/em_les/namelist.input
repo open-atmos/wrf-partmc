@@ -1,0 +1,178 @@
+ &time_control
+ run_days                            = 0,
+ run_hours                           = 1,
+ run_minutes                         = 0,
+ run_seconds                         = 00,
+ start_year                          = 0001, 0001, 0001,
+ start_month                         = 01,   01,   01,
+ start_day                           = 01,   01,   01,
+ start_hour                          = 00,   01,   00,
+ start_minute                        = 00,   30,   00,
+ start_second                        = 00,   00,   00,
+ end_year                            = 0001, 0001, 0001,
+ end_month                           = 01,   01,   01,
+ end_day                             = 01,   01,   01,
+ end_hour                            = 01,   02,   00,
+ end_minute                          = 00,   30,   00,
+ end_second                          = 00,   00,   00,
+ history_interval_m                  = 10,   10,   1,
+ history_interval_s                  = 00,   00,   1,
+ frames_per_outfile                  = 1000, 1000, 1000,
+ restart                             = .false.,
+ restart_interval_m                  = 60,
+ io_form_history                     = 2,
+ io_form_restart                     = 2,
+ io_form_input                       = 2,
+ io_form_boundary                    = 2,
+ io_form_auxhist2 = 2,
+ auxhist2_interval = 10,
+ auxhist2_outname = 'aerosols_d<domain>_<date>',
+ debug_level                         = 0 
+ /
+
+ &domains
+ time_step                           = 1,
+ time_step_fract_num                 = 0,
+ time_step_fract_den                 = 1,
+ max_dom                             = 1,
+ s_we                                = 1,     1,     1,
+ e_we                                = 20,   100,    151,
+ s_sn                                = 1,     1,     1,
+ e_sn                                = 20,   100,    151,
+ s_vert                              = 1,     1,     1,
+ e_vert                              = 40,   100,    41,
+ dx                                  = 100,   50,    16.6667, 
+ dy                                  = 100,   50,    16.6667, 
+ ztop                                = 2000,  2000,  2000,
+ grid_id                             = 1,     2,     3,
+ parent_id                           = 0,     1,     2,
+ i_parent_start                      = 0,     10,    15,
+ j_parent_start                      = 0,     10,    15,
+ parent_grid_ratio                   = 1,     3,     3,
+ parent_time_step_ratio              = 1,     3,     3,
+ feedback                            = 0,
+ smooth_option                       = 0
+ /
+
+ &physics
+ mp_physics                          = 0,     0,     0,
+ ra_lw_physics                       = 0,     0,     0,
+ ra_sw_physics                       = 0,     0,     0,
+ radt                                = 0,     0,     0,
+ sf_sfclay_physics                   = 0,     1,     1,
+ sf_surface_physics                  = 0,     0,     0,
+ bl_pbl_physics                      = 0,     0,     0,
+ bldt                                = 0,     0,     0,
+ cu_physics                          = 0,     0,     0,
+ cudt                                = 0,     0,     0,
+ isfflx                              = 2,
+ num_land_cat = 24,
+ num_soil_layers                     = 5,
+ /
+
+ &fdda
+ /
+
+ &dynamics
+ rk_ord                              = 3,
+ diff_opt                            = 2,      2,      2,
+ km_opt                              = 2,      2,      2,
+ damp_opt                            = 0,
+ zdamp                               = 5000.,  5000.,  5000.,
+ dampcoef                            = 0.1,    0.2,    0.2
+ khdif                               = 1.,      1.,    .05,
+ kvdif                               = 1.,      1.,    .05,
+ c_s                                 = 0.18
+ c_k                                 = 0.10
+ mix_isotropic                       = 1
+ smdiv                               = 0.1,    0.1,    0.1,
+ emdiv                               = 0.01,   0.01,   0.01,
+ epssm                               = 0.1,    0.1,    0.1
+ tke_heat_flux                       = 0.24,   0.24,   0.24,
+ time_step_sound                     = 6,      6,      6,
+ h_mom_adv_order                     = 5,      5,      5,
+ v_mom_adv_order                     = 3,      3,      3,
+ h_sca_adv_order                     = 5,      5,      5,
+ v_sca_adv_order                     = 3,      3,      3,
+ moist_adv_opt                       = 1,      1,      1,
+ scalar_adv_opt                      = 2,      1,      1,
+ chem_adv_opt                        = 2,      1,      1,
+ tke_adv_opt                         = 1,      1,      1,
+ mix_full_fields                     = .true., .true., .true.,
+ non_hydrostatic                     = .true., .true., .true.,
+ pert_coriolis                       = .true., .true., .true.,
+ use_theta_m                         = 1,
+ /
+
+ &bdy_control
+ periodic_x                          = .true., .false.,.false.,
+ symmetric_xs                        = .false.,.false.,.false.,
+ symmetric_xe                        = .false.,.false.,.false.,
+ open_xs                             = .false.,.false.,.false.,
+ open_xe                             = .false.,.false.,.false.,
+ periodic_y                          = .true., .false.,.false.,
+ symmetric_ys                        = .false.,.false.,.false.,
+ symmetric_ye                        = .false.,.false.,.false.,
+ open_ys                             = .false.,.false.,.false.,
+ open_ye                             = .false.,.false.,.false.,
+ nested                              = .false., .true., .true.,
+ /
+
+ &grib2
+ /
+
+ &namelist_quilt
+ nio_tasks_per_group = 0,
+ nio_groups = 1,
+ /
+
+ &chem
+ kemit                               = 19,
+ chem_opt                            = 777,        2,
+ bioemdt                             = 30,       30,
+ photdt                              = 30,       30,
+ chemdt                              = 2.,       2.,
+ emiss_inpt_opt                      = 1,        1,
+ emiss_opt                           = 0,        3,
+ io_style_emissions = 1
+ chem_in_opt                         = 0,        0,
+ phot_opt                            = 1,        1,
+ gas_drydep_opt                      = 0,        1,
+ aer_drydep_opt                      = 0,        1,
+ bio_emiss_opt                       = 1,        1,
+ gas_bc_opt                          = 1,        1,
+ gas_ic_opt                          = 1,        1,
+ aer_bc_opt                          = 1,        1,
+ aer_ic_opt                          = 1,        1,
+ gaschem_onoff                       = 1,        1,
+ aerchem_onoff                       = 1,        1,
+ wetscav_onoff                       = 0,        0,
+ cldchem_onoff                       = 0,        0,
+ vertmix_onoff                       = 1,        1,
+ chem_conv_tr                        = 0,        1,
+ biomass_burn_opt                    = 0,        0,
+ aer_ra_feedback                     = 0,        0,
+ /
+
+ &partmc
+ num_particles = 500.0,
+ do_coagulation = .false.
+ do_emission = .false.,
+ do_mosaic = .false.,
+ do_deposition = .false.,
+ do_gridded_output = .false.,
+ do_transport = .true.,
+ record_removals = .false.,
+ do_optical = .false.,
+ random_seed = 0,
+ partmc_prefix_out = "./out/cares"
+ partmc_prefix_in = "./",
+ partmc_specfile = "./scenario.spec",
+ partmc_emissions = "./aero_emit_dists_new/aero_emit_dists",
+ partmc_bcs = "./bcs/bcs",
+ partmc_ics = "./ics/ics",
+ partmc_chem_dt = 300.0,
+ num_bins = 100,
+ num_edges = 101,
+ do_ideal_init_cond = .true.
+ /

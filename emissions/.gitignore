@@ -1,0 +1,8 @@
+*.TBL
+RRTM*
+*.pdf
+ozone*formatted
+create_*
+*.nc
+*.tar.gz
+*_d01

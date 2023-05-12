@@ -1,0 +1,90 @@
+
+&control
+
+do_bc     = .true.
+do_ic     = .true.
+domain    = 1
+
+dir_wrf              = '/lustre/d3j082/calnex/mozart.processing/' 
+bdy_cond_file_stem   = 'wrfbdy'
+init_cond_file_stem  = 'wrfinput'
+met_file_prefix='met_em'
+met_file_suffix='.nc'
+
+surf_press_name = 'PSFC'
+
+dir_moz = '/lustre/amt/field.data/cares.raw/mozart/'
+fn_moz  = 'mozart4geos5_ca_0001.nc'
+
+spc_map = 'co -> CO', 'o3 -> O3', 'so2 -> SO2', 'no -> NO', 'no2 -> NO2',
+          'h2o2 -> H2O2', 'no3 -> NO3', 'n2o5 -> N2O5', 'hno3 -> HNO3', 'nh3 -> NH3',
+          'hcho -> CH2O', 'ccho -> CH3CHO', 'pan -> PAN', 'hno4 -> HO2NO2',
+          'ethene -> C2H4', 'c2h6 -> C2H6', 'c3h8 -> C3H8', 
+          'alk3 -> 0.5*BIGALK', 'alk4 -> 0.3*BIGALK', 'alk5 -> 0.2*BIGALK',
+          'ole1 -> C3H6', 'ole2 -> BIGENE', 
+          'aro1 -> 0.5*TOLUENE', 'aro2 -> 0.5*TOLUENE', 
+          'mek -> MEK', 'mvk -> MVK', 'mgly -> CH3COCHO', 'methacro -> MACR',
+          'isoprod -> MVK+MACR+HYDRALD', 
+          'isoprene -> ISOP', 
+          'acet -> CH3COCH3', 'meoh -> CH3OH', 'etoh -> C2H5OH',
+          'oc_a01->2.03507e-2*OC1+2.03507e-2*OC2+.244208*SOA;1.e9',
+          'oc_a02->7.56517e-2*OC1+7.56517e-2*OC2+.907818*SOA;1.e9',
+          'oc_a03->.135967*OC1+.135967*OC2+1.6316*SOA;1.e9',
+          'oc_a04->.118389*OC1+.118389*OC2+1.42066*SOA;1.e9',
+          'oc_a05->4.99125e-2*OC1+4.99125e-2*OC2+.598948*SOA;1.e9',
+          'oc_a06->1.01598e-2*OC1+1.01598e-2*OC2+.121917*SOA;1.e9',
+          'oc_a07->9.93651e-4*OC1+9.93651e-4*OC2+1.19238e-2*SOA;1.e9',
+          'oc_a08->4.64288e-5*OC1+4.64288e-5*OC2+5.57139e-4*SOA;1.e9',
+          'bc_a01->CB1+CB2;.113571e9',
+          'bc_a02->CB1+CB2;.157058e9',
+          'bc_a03->CB1+CB2;8.65472e7',
+          'bc_a04->CB1+CB2;1.89193e7',
+          'bc_a05->CB1+CB2;1.62456e6',
+          'bc_a06->CB1+CB2;5.41423e4',
+          'bc_a07->CB1+CB2;6.92386e2',
+          'bc_a08->CB1+CB2;3.36495',
+          'so4_a01->1.5563e-3*SO4;3.31423e9',
+          'so4_a02->2.2877e-2*SO4;3.31423e9',
+          'so4_a03->.1366*SO4;3.31423e9',
+          'so4_a04->.33451*SO4;3.31423e9',
+          'so4_a05->.3378*SO4;3.31423e9',
+          'so4_a06->.14077*SO4;3.31423e9',
+          'so4_a07->2.4057e-2*SO4;3.31423e9',
+          'so4_a08->1.6704e-3*SO4;3.31423e9',
+          'no3_a01->1.5563e-3*NH4NO3;2.76186e9',
+          'no3_a02->2.2877e-2*NH4NO3;2.76186e9',
+          'no3_a03->.1366*NH4NO3;2.76186e9',
+          'no3_a04->.33451*NH4NO3;2.76186e9',
+          'no3_a05->.3378*NH4NO3;2.76186e9',
+          'no3_a06->.14077*NH4NO3;2.76186e9',
+          'no3_a07->2.4057e-2*NH4NO3;2.76186e9',
+          'no3_a08->1.6704e-3*NH4NO3;2.76186e9',
+          'na_a02->.2*SA1;1.e9',
+          'na_a03->.2*SA1;1.e9',
+          'na_a04->.2*SA1;1.e9',
+          'na_a05->.2*SA1;1.e9',
+          'na_a06->.8*SA2;1.e9',
+          'na_a07->.8*SA3;1.e9',
+          'cl_a02->.3*SA1;1.e9',
+          'cl_a03->.3*SA1;1.e9',
+          'cl_a04->.3*SA1;1.e9',
+          'cl_a05->.3*SA1;1.e9',
+          'cl_a06->1.2*SA2;1.e9',
+          'cl_a07->1.2*SA3;1.e9',
+          'oin_a02->1.16516*[DUST1];1.e9',
+          'oin_a03->1.16516*[DUST1];1.e9',
+          'oin_a04->1.16516*[DUST1];1.e9',
+          'oin_a05->1.16516*[DUST1];1.e9',
+          'oin_a06->4.66064*[DUST2];1.e9',
+          'oin_a07->4.66064*[DUST3];1.e9',
+          'oin_a08->4.66064*[DUST4];1.e9',
+          'num_a01->4.496e14*OC1+4.496e14*OC2+5.395e15*SOA+4.516e15*CB1+4.516e15*CB2+1.207e14*SO4+1.005e14*NH4NO3;2.387325e2'
+          'num_a02->2.089e14*OC1+2.089e14*OC2+2.507e15*SOA+7.807e14*CB1+7.807e14*CB2+2.217e14*SO4+1.848e14*NH4NO3+1.1298e15*SA1+2.2277e15*[DUST1];2.387325e2'
+          'num_a03->4.694e13*OC1+4.694e13*OC2+5.632e14*SOA+5.378e13*CB1+5.378e13*CB2+1.655e14*SO4+1.379e14*NH4NO3+1.4122e14*SA1+2.7846e14*[DUST1];2.387325e2'
+          'num_a04->5.109e12*OC1+5.109e12*OC2+6.13e13*SOA+1.47e12*CB1+1.47e12*CB2+5.065e13*SO4+4.221e13*NH4NO3+1.7652e13*SA1+3.4808e13*[DUST1];2.387325e2'
+          'num_a05->2.692e11*OC1+2.692e11*OC2+3.231e12*SOA+1.577e10*CB1+1.577e10*CB2+6.395e12*SO4+5.329e12*NH4NO3+2.2066e12*SA1+4.351e12*[DUST1];2.387325e2'
+          'num_a06->6.85e9*OC1+6.85e9*OC2+8.22e10*SOA+6.571e7*CB1+6.571e7*CB2+3.331e11*SO4+2.776e11*NH4NO3+1.1033e12*SA2+2.1755e12*[DUST2];2.387325e2'
+          'num_a07->8.374e7*OC1+8.374e7*OC2+1.005e9*SOA+105339*CB1+105339*CB2+7.115e9*SO4+5.929e9*NH4NO3+1.3791e11*SA3+2.7194e11*[DUST3];2.387325e2'
+          'num_a08->489137.*OC1+489137.*OC2+5.87e6*SOA+63.8*CB1+63.8*CB2+6.175e7*SO4+5.146e7*NH4NO3+3.3992e10*[DUST4];2.387325e2'
+/
+

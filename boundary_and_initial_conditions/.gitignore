@@ -1,0 +1,7 @@
+*.dat
+create_ics
+create_bcs
+create_ics_ideal
+ics*
+bcs*
+*.tar.gz

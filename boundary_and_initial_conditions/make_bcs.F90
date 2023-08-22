@@ -30,6 +30,7 @@ program make_bcs
   integer :: n_aero_species
   type(aero_data_t) :: aero_data
   integer :: is, ie, js, je
+  integer :: is_local, ie_local, js_local, je_local
   real(kind=dp), allocatable, dimension(:) :: aero_bc_rate, &
        aero_bc_time
   real(kind=dp), allocatable, dimension(:) :: mode_diams, mode_std, &
@@ -41,7 +42,7 @@ program make_bcs
   type(spec_file_t) :: sub_file
   character(len=300) :: file_path, filename, file_prefix, command
   character(len=300) :: output_file_path, output_file_prefix
-  integer :: ks, ke, n_proc, rem
+  integer :: ks, ke, n_proc, rem_x, rem_y
   logical, parameter :: mam3 = .true.
 
   call pmc_mpi_init()
@@ -95,20 +96,29 @@ program make_bcs
   ny = je - js + 1 
   nz = nz - 1 
   nt = 8
-
-  ! Lets decompose the vertical since all boundaries have equal levels
+  ks = 1
+  ke = nz - 1
   n_proc = pmc_mpi_size()
-  rem = mod(nz, n_proc)
+  rem_x = mod(nx, n_proc)
+  rem_y = mod(ny, n_proc)
 
-  if (pmc_mpi_rank() < rem) then
-      ks = pmc_mpi_rank() * ((nz / n_proc) + 1) + 1
-      ke =( pmc_mpi_rank() + 1)  * ((nz / n_proc) + 1)
+  if (pmc_mpi_rank() < rem_x) then
+      is_local = pmc_mpi_rank() * ((nx / n_proc) + 1) + 1
+      ie_local =( pmc_mpi_rank() + 1)  * ((nx / n_proc) + 1)
   else
-      ks = pmc_mpi_rank() * (nz / n_proc) + rem + 1
-      ke =( pmc_mpi_rank() + 1)  * (nz / n_proc) + rem
+      is_local = pmc_mpi_rank() * (nx / n_proc) + rem_x + 1
+      ie_local =( pmc_mpi_rank() + 1)  * (nx / n_proc) + rem_x
   end if
 
-  print*, 'MPI rank: ', pmc_mpi_rank(), 'start:', ks, 'finish:', ke
+  if (pmc_mpi_rank() < rem_y) then
+      js_local = pmc_mpi_rank() * ((ny / n_proc) + 1) + 1
+      je_local =( pmc_mpi_rank() + 1)  * ((ny / n_proc) + 1)
+  else
+      js_local = pmc_mpi_rank() * (ny / n_proc) + rem_y + 1
+      je_local =( pmc_mpi_rank() + 1)  * (ny / n_proc) + rem_y
+  end if
+
+!  print*, 'MPI rank: ', pmc_mpi_rank(), 'start:', , 'finish:', ke
 
   allocate(aero_bc_time(nt))
   allocate(aero_bc_rate(nt))
@@ -119,11 +129,7 @@ program make_bcs
      aero_bc_rate(i) = 1.0d0
   end do
 
-  if (mam3) then
-     n_modes = 3
-  else
-     n_modes = 4
-  end if
+  n_modes = 3
 
   n_aero_species = aero_data_n_spec(aero_data)
 
@@ -137,51 +143,20 @@ program make_bcs
   ! Zero everything out
   mode_num_concs = 0.0d0
   mode_vol_fracs = 0.0d0
-  if (mam3) then
-     aero_spec_name(1) = "aitken"
-     mode_diams(1) = 0.0260d-6
-     mode_std(1) =  1.6d0
-     mode_source(1) = 1
+  aero_spec_name(1) = "aitken"
+  mode_diams(1) = 0.0260d-6
+  mode_std(1) =  1.6d0
+  mode_source(1) = 1
 
-     aero_spec_name(2) = "accumulation"
-     mode_diams(2) =  0.11d-6
-     mode_std(2) =  1.8d0
-     mode_source(2) = 2
+  aero_spec_name(2) = "accumulation"
+  mode_diams(2) =  0.11d-6
+  mode_std(2) =  1.8d0
+  mode_source(2) = 2
 
-     aero_spec_name(3) = "coarse"
-     mode_diams(3) =  2.0d-6
-     mode_std(3) =  1.8d0
-     mode_source(3) = 3
-  else
-  ! Set values
-     aero_spec_name(1) = "so4"
-     mode_diams(1) =  69.5 * 2.0d0 
-     mode_std(1) =  2.03d0
-     mode_vol_fracs(1,1) = 1.0
-     mode_source(1) = 1
-
-     aero_spec_name(2) = 'no3'
-     mode_diams(2) = 69.5 * 2.0d0
-     mode_std(2) = 2.03d0
-     mode_vol_fracs(2,2) = 62.0d0 / 80.0d0 
-     mode_vol_fracs(2,4) = 18.0d0 / 80.0d0
-     mode_source(2) = 2
-
-     aero_spec_name(3) = 'bc'
-     mode_diams(3) = 11.8 * 2.0d0 
-     mode_std(3) = 2.0d0
-     mode_vol_fracs(3,19) = 1.0
-     mode_source(3) = 3
-
-     aero_spec_name(4) = 'oc'
-     mode_diams(4) = 21.2 * 2.0d0
-     mode_std(4) = 2.2d0
-     mode_vol_fracs(4,18) = 1.0
-     mode_source(4) = 4
-
-     ! Convert from nanometers to meters
-     mode_diams = mode_diams / 1e9
-  end if
+  aero_spec_name(3) = "coarse"
+  mode_diams(3) =  2.0d-6
+  mode_std(3) =  1.8d0
+  mode_source(3) = 3
 
   ! do XS
   i = is
@@ -192,12 +167,11 @@ program make_bcs
   call load_data_aero(mass_conc, 'BXS', n_modes, n_aero_species, nt, &
        ny, nz, aero_spec_name, ncid_bc)
 
-  do j = js,je
-     do k = ks,ke
-        call create_bcs(i, j, k, n_modes, mass_conc(:,:,j,k,:), n_aero_species, nt, mode_diams, &
-             mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
-             aero_data, file_prefix)
-     end do
+  do j = js_local,je_local
+     call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,j,:,:), &
+          n_aero_species, nt, mode_diams, &
+          mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
+          file_prefix)
   end do
 
   ! do XE
@@ -206,12 +180,11 @@ program make_bcs
   call load_data_aero(mass_conc, 'BXE', n_modes, n_aero_species, nt, &
        ny, nz, aero_spec_name, ncid_bc)
 
-  do j = js,je
-     do k = ks,ke
-        call create_bcs(i, j, k, n_modes, mass_conc(:,:,j,k,:), n_aero_species, nt, mode_diams, &
-             mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
-             aero_data, file_prefix)
-     end do
+  do j = js_local,je_local
+     call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,j,:,:), &
+          n_aero_species, nt, mode_diams, &
+          mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
+          file_prefix)
   end do
 
   deallocate(mass_conc)
@@ -224,12 +197,11 @@ program make_bcs
   call load_data_aero(mass_conc, 'BYS', n_modes, n_aero_species, nt, &
        nx, nz, aero_spec_name, ncid_bc)
 
-  do i = is,ie
-     do k = ks,ke
-        call create_bcs(i, j, k, n_modes, mass_conc(:,:,i,k,:), n_aero_species, nt, mode_diams, &
-             mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
-             aero_data, file_prefix)
-     end do
+  do i = is_local,ie_local
+     call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,i,:,:), &
+          n_aero_species, nt, mode_diams, &
+          mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
+          file_prefix)
   end do
 
   ! do YE
@@ -237,12 +209,11 @@ program make_bcs
 
   call load_data_aero(mass_conc, 'BYE', n_modes, n_aero_species, nt, &
        nx, nz, aero_spec_name, ncid_bc)
-  do i = is,ie 
-     do k = ks,ke
-        call create_bcs(i, j, k, n_modes, mass_conc(:,:,i,k,:), n_aero_species, nt, mode_diams, &
-             mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
-             aero_data, file_prefix)
-     end do
+  do i = is_local,ie_local 
+     call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,i,:,:), &
+          n_aero_species, nt, mode_diams, &
+          mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
+          file_prefix)
   end do
 
   deallocate(mode_diams)
@@ -453,16 +424,18 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> Creates a boundary condition NetCDF for a given grid cell.
-  subroutine create_bcs(i, j, k, num_modes, values, num_aero_species, num_times, mode_diams, &
+  subroutine create_bcs(i, j, nz, aero_data, num_modes, values, num_aero_species, num_times, mode_diams, &
        mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
-       aero_data, file_prefix)
+       file_prefix)
 
     !> Index i for grid cell.
     integer, intent(in) :: i
     !> Index j for grid cell.
     integer, intent(in) :: j
-    !> Index k for grid cell.
-    integer, intent(in) :: k
+    !> Number of vertical layers.
+    integer, intent(in) :: nz 
+    !> Aerosol data.
+    type(aero_data_t), intent(in) :: aero_data
     !> Number of aerosol modes.
     integer, intent(in) :: num_modes
     !> Number of timesteps.
@@ -472,23 +445,22 @@ contains
     !> Standard deviation of each mode.
     real(kind=dp), intent(in) :: mode_std(num_modes)
     !> Volume fractions of each mode.
-    real(kind=dp), intent(in) :: mode_vol_fracs(num_modes, 20)
+    real(kind=dp), intent(in) :: mode_vol_fracs(num_modes, &
+         aero_data_n_spec(aero_data))
     !> Source number.
     integer, intent(in) :: mode_source(num_modes)
     !> Number concentrations.
-    real(kind=dp), intent(in) :: values(num_modes, num_aero_species, num_times)
+    real(kind=dp), intent(in) :: values(num_modes, num_aero_species, nz, num_times)
     !> Boundary condition scale factor for aerosols.
     real(kind=dp), intent(in) :: aero_bc_rate(num_times)
     !> Boundary condition update time for aerosols.
     real(kind=dp), intent(in) :: aero_bc_time(num_times)
-    !> Aerosol data.
-    type(aero_data_t), intent(in) :: aero_data
     !> Boundary condition filename input prefix.
     character(len=300), intent(in) :: file_prefix
 
     character(len=100) :: suffix, filename
     type(aero_dist_t), allocatable :: aero_dists(:)
-    integer :: i_time
+    integer :: i_time, k
     integer :: start2(2), count2(2)
     integer :: check_dim_size
     integer :: dimid_n_times
@@ -498,60 +470,49 @@ contains
          no3_ratio
     real(kind=dp) :: total_num_conc
     integer :: i_spec, num_aero_species
+    real(kind=dp), allocatable :: char_radius(:,:,:), vol_frac(:,:,:,:), &
+         vol_frac_std(:,:,:,:), log10_std_dev_radius(:,:,:), num_conc(:,:,:)
+    integer, allocatable :: mode_type(:,:,:), source(:,:,:)
+    character(len=AERO_MODE_NAME_LEN) :: mode_name
+    integer :: n_spec
 
-    allocate(aero_dists(num_times))
+    n_spec = aero_data_n_spec(aero_data)
 
-    ! Time loop
+    allocate(mode_type(num_times,nz,num_modes))
+    allocate(char_radius(num_times,nz,num_modes))
+    allocate(log10_std_dev_radius(num_times,nz,num_modes))
+    allocate(num_conc(num_times,nz,num_modes))
+    allocate(vol_frac(num_times,nz,num_modes,n_spec))
+    allocate(vol_frac_std(num_times,nz,num_modes,n_spec))
+    allocate(source(num_times,nz,num_modes))
+
+    do k = 1,nz
     do i_time = 1,num_times
-       ! We will combine the SO4 and NO3 into a single mode
-       allocate(aero_dists(i_time)%mode(num_modes))
-       ! Do SO4 and NO3
-!       aero_dists(i_time)%mode(1)%name = 'string'
-!       aero_dists(i_time)%mode(1)%type =  1
-!       aero_dists(i_time)%mode(1)%char_radius = &
-!            mode_diams(1) / 2.0
-!       aero_dists(i_time)%mode(1)%log10_std_dev_radius = &
-!            dlog10(mode_std(1))
-!       so4_num_conc = get_num_conc(values(1,i_time), mode_diams(1), mode_std(1))
-!       no3_num_conc = get_num_conc(values(2,i_time), mode_diams(2), mode_std(2))
-!       aero_dists(i_time)%mode(1)%num_conc = so4_num_conc + no3_num_conc
-!       so4_ratio = so4_num_conc / (no3_num_conc + so4_num_conc)
-!       no3_ratio = no3_num_conc / (no3_num_conc + so4_num_conc)
-!       nh4_ratio = .375d0
-!       allocate(aero_dists(i_time)%mode(1)%vol_frac(20))
-!       aero_dists(i_time)%mode(1)%vol_frac = 0.0d0
-!       aero_dists(i_time)%mode(1)%vol_frac(1) = so4_ratio
-!       aero_dists(i_time)%mode(1)%vol_frac(2) = no3_ratio
-!       aero_dists(i_time)%mode(1)%vol_frac(4) = nh4_ratio
-!       aero_dists(i_time)%mode(1)%source = mode_source(1)
-!       ! Loop over other modes
-       do i_mode = 1,num_modes
-           aero_dists(i_time)%mode(i_mode)%name = 'string'
-           aero_dists(i_time)%mode(i_mode)%type =  1
-           aero_dists(i_time)%mode(i_mode)%char_radius = &
-                mode_diams(i_mode) / 2.0
-           aero_dists(i_time)%mode(i_mode)%log10_std_dev_radius = &
-                dlog10(mode_std(i_mode))
+    do i_mode = 1,num_modes
+       mode_name = 'string'
+       mode_type(i_time,k,i_mode) = 1
+       char_radius(i_time,k,i_mode) = mode_diams(i_mode) / 2.0
+       log10_std_dev_radius(i_time,k,i_mode) = dlog10(mode_std(i_mode))
        total_num_conc = 0.0d0
        do i_spec = 1,num_aero_species
          total_num_conc = total_num_conc + get_num_conc( &
-            values(i_mode,i_spec,i_time), mode_diams(i_mode), mode_std(i_mode), &
+            values(i_mode,i_spec,k,i_time), mode_diams(i_mode), mode_std(i_mode), &
             aero_data%density(i_spec))
        end do
-           aero_dists(i_time)%mode(i_mode)%num_conc = total_num_conc
-           aero_dists(i_time)%mode(i_mode)%vol_frac = values(i_mode,:,i_time) / sum(values(i_mode,:,i_time))
-           ! FIXME: Source number
-          aero_dists(i_time)%mode(i_mode)%source = mode_source(i_mode)
-       end do
+       num_conc(i_time,k,i_mode) = total_num_conc
+       vol_frac(i_time,k,i_mode,:) = values(i_mode,:,k,i_time) / &
+            sum(values(i_mode,:,k,i_time))
+       vol_frac_std(i_time,k,i_mode,:) = 0.0d0
+       source(i_time,k,i_mode) = mode_source(i_mode)
+    end do
+    end do
     end do
 
     suffix = '.nc'
-
     ! Output to the NetCDF file
-    write(filename, '(a,a,i3.3,a,i3.3,a,i3.3,a)') &
-         trim(file_prefix),'_',i,'_',j,'_',k,trim(suffix)
+    write(filename, '(a,a,i3.3,a,i3.3,a)') &
+         trim(file_prefix),'_',i,'_',j,trim(suffix)
     call pmc_nc_open_write(filename, ncid)
-    ! What do we do for no emissions for that grid cell? Empty file?
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_times", &
          nt, dimid_times))
@@ -567,11 +528,8 @@ contains
           long_name="Aerosol boundary condition update time", &
           description="Aerosol boundary condition set-points times (s).")
     ! Output the boundary condition data
-    call aero_dist_output_netcdf(aero_dists,nt,ncid)
 
     call pmc_nc_check(nf90_close(ncid))
-
-    deallocate(aero_dists)
 
   end subroutine create_bcs
 
@@ -680,7 +638,7 @@ contains
                 spec_index = aero_data_spec_by_name(aero_data, "Cl")
                 mass_conc(i_mode_pmc,spec_index,:,:,:) = &
                      mass_conc(i_mode_pmc,spec_index,:,:,:) &
-                     + temp_species(:,:,:,1) * (1.0d0 - aero_factors(i_spec))
+                     + temp_species(:,:,ind,:) * (1.0d0 - aero_factors(i_spec))
              end if
 !          mass_conc(i_mode,:,:,:) = mass_conc(i_mode,:,:,:) + temp_species(:,:,ind,:)
           end if

@@ -262,7 +262,7 @@ contains
 
     t1 = MPI_Wtime()
 
-    if (config_flags%do_scm) then
+    if (config_flags%periodic_x .and. config_flags%periodic_y) then
       j_start = max(pmc_js,1)
       j_end = min(pmc_je,global_ny)
       i_start = max(pmc_is,1)
@@ -286,7 +286,7 @@ contains
        do i = i_start,i_end
           call init_read_in_ics(grid, aero_states(i,:,j), gas_states(i,:,j), &
                i, j, nz, aero_data, gas_data, env_states(i,:,j), &
-               grid%partmc_ics, config_flags%do_scm)
+               grid%partmc_ics)
        end do
        end do
     else
@@ -304,18 +304,14 @@ contains
 
     call wrf_message('PartMC_init: Setting scenario for the WRF domain')
 
-
     if (grid%do_emission) then
        do j = j_start,j_end
        do k = pmc_ks,pmc_ke
        do i = i_start,i_end
-          ! With the interpolation, we wont want emissions on at all levels so
-          ! turn off the emission rates at levels that dont really have emissions
-          ! For now, we only want surface emissions
-          if (k == 1) then
-            ! Read in from NetCDF file
+          ! Emissions for the lowest kemit layers.
+          if (k <= config_flags%kemit) then
             call init_read_in_emissions(scenario(i,k,j), i, j, k, aero_data, &
-                 gas_data, grid%partmc_emissions, config_flags%do_scm)
+                 gas_data, grid%partmc_emissions)
           else
              call init_zero_emissions(scenario(i,k,j), aero_data, &
                   gas_data)
@@ -593,7 +589,7 @@ contains
 
   !> Read in gas and aerosol emissions for a grid cell.
   subroutine init_read_in_emissions(scenario, i, j, k, aero_data, gas_data, &
-       prefix, scm_mode)
+       prefix)
 
     !> Scenario data.
     type(scenario_t),intent(inout) :: scenario
@@ -609,8 +605,6 @@ contains
     type(gas_data_t), intent(inout) :: gas_data
     !> File prefix.
     character(len=*), intent(in) :: prefix
-    !> Whether or not the model is in single column mode.
-    logical, intent(in) :: scm_mode
 
     character(len=INPUT_FILE_PATH_NAME_LEN) :: file
     character(len=AERO_MODE_NAME_LEN) :: mode_name, weight_class
@@ -640,13 +634,9 @@ contains
     ! FIXME: Add error checking to assure that n_spec in the input file
     ! is equal to the n_spec in aero_data
 
-    if (scm_mode) then
-       write(file, '(a,a)') &
-            trim(prefix), '_001_001_001.nc'
-    else
-       write(file, '(a,a,i3.3,a,i3.3,a,i3.3,a)') &
-            trim(prefix),'_',i,'_',j,'_',k,'.nc'
-    end if
+    write(file, '(a,a,i3.3,a,i3.3,a,i3.3,a)') &
+         trim(prefix),'_',i,'_',j,'_',k,'.nc'
+
     !write(*,'(a,a)') 'reading emissions file ', trim(file)
 
     call pmc_nc_open_read(file, ncid)
@@ -1065,7 +1055,7 @@ contains
 
   !> Reads in aerosol and gas initial conditions for a grid cell.
   subroutine init_read_in_ics(grid, aero_state, gas_state, i, j, nz, aero_data, &
-       gas_data, env_state, prefix, scm_mode)
+       gas_data, env_state, prefix)
 
     integer,intent(in) :: nz 
     !> WRF domain.
@@ -1086,8 +1076,6 @@ contains
     type(env_state_t), intent(in) :: env_state(nz)
     !> Filename prefix.
     character(len=*), intent(in) :: prefix
-    !> Whether or not the model is in single column mode.
-    logical, intent(in) :: scm_mode
 
     character(len=INPUT_FILE_PATH_NAME_LEN) :: file, group
     character(len=AERO_MODE_NAME_LEN) :: mode_name

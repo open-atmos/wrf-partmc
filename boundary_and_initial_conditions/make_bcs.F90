@@ -294,7 +294,7 @@ contains
     integer :: i_time, k
     integer :: start2(2), count2(2)
     integer :: check_dim_size
-    integer :: dimid_n_times
+    integer :: dimid_n_times, dimid_nz, dimid_n_specs, dimid_n_modes
     character(len=NF90_MAX_NAME) :: check_name
     integer :: ncid
     real(kind=dp) :: so4_num_conc, no3_num_conc, nh4_ratio, so4_ratio, &
@@ -346,19 +346,39 @@ contains
     call pmc_nc_open_write(filename, ncid)
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_times", &
-         nt, dimid_times))
+         nt, dimid_n_times))
+    call pmc_nc_check(nf90_def_dim(ncid, "n_aero_modes", n_modes, &
+         dimid_n_modes))
+    call pmc_nc_check(nf90_def_dim(ncid, "n_aero_specs", n_spec, &
+         dimid_n_specs))
+    call pmc_nc_check(nf90_def_dim(ncid, "nz", nz, dimid_nz))
     call pmc_nc_check(nf90_enddef(ncid))
+
     call pmc_nc_write_real_1d(ncid, aero_bc_rate, &
-          "aero_bc_rate_scale", (/ dimid_times /), &
+          "aero_bc_rate_scale", (/ dimid_n_times /), &
           unit="(1)", &
           long_name="Aerosol bc rate", &
           description="Aerosol boundary condition rate scales at set-points")
     call pmc_nc_write_real_1d(ncid, aero_bc_time, &
-          "aero_bc_time", (/ dimid_times /), &
+          "aero_bc_time", (/ dimid_n_times /), &
           unit="s", &
           long_name="Aerosol boundary condition update time", &
           description="Aerosol boundary condition set-points times (s).")
     ! Output the boundary condition data
+    call pmc_nc_write_integer_3d(ncid, mode_type, "mode_type", &
+         (/ dimid_n_times, dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_3d(ncid, char_radius, "char_radius", &
+         (/ dimid_n_times, dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_3d(ncid, log10_std_dev_radius, &
+         "log10_std_dev_radius", (/ dimid_n_times, dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_3d(ncid, num_conc, "num_conc", &
+         (/ dimid_n_times, dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_4d(ncid, vol_frac, "vol_frac", &
+         (/ dimid_n_times, dimid_nz, dimid_n_modes, dimid_n_specs /))
+    call pmc_nc_write_real_4d(ncid, vol_frac_std, "vol_frac_std", &
+         (/ dimid_n_times, dimid_nz, dimid_n_modes, dimid_n_specs /))
+    call pmc_nc_write_integer_3d(ncid, source, "source", &
+         (/ dimid_n_times, dimid_nz, dimid_n_modes /))
 
     call pmc_nc_check(nf90_close(ncid))
 

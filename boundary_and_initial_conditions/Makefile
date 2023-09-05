@@ -6,6 +6,7 @@ FFLAGS = -O3 #$(FFLAGS_DEBUG)
 
 MODULES =  \
   ../partmc/src/util.o \
+  ../partmc/src/sys.o \
   ../partmc/src/rand_gsl.o \
   ../partmc/src/sort.o \
   ../partmc/src/constants.o \

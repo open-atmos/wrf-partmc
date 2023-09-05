@@ -28,7 +28,7 @@ name = "bin_centers"
 description = ""
 units = ""
 string = reg_format.format(var, type, var_name,
-       dim, 'pmc', 1, '-', hist, name, description, units)
+       dim, 'pmc', 1, '-', hist_3, name, description, units)
 f.write(string)
 
 var = "state"
@@ -39,7 +39,7 @@ name = "bin_edges"
 description = ""
 units = ""
 string = reg_format.format(var,type, var_name,
-       dim, 'pmc', 1, '-', hist, name, description, units)
+       dim, 'pmc', 1, '-', hist_3, name, description, units)
 f.write(string)
 
 # 3d variables that are really arrays

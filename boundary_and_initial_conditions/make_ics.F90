@@ -180,11 +180,9 @@ program make_ics
 
   do i = is_local,ie_local
      do j = js,je
-!        do k = 1,nz
-           call create_ics(i, j, nz, n_modes, n_aero_species, &
-                aero_values(:,:,i,j,:), aero_data, mode_diams, &
-                mode_std, mode_vol_fracs, mode_source, file_prefix)
-!        end do
+        call create_ics(i, j, nz, n_modes, n_aero_species, &
+             aero_values(:,:,i,j,:), aero_data, mode_diams, &
+             mode_std, mode_vol_fracs, mode_source, file_prefix)
      end do
   end do
 
@@ -198,164 +196,6 @@ program make_ics
   call pmc_mpi_finalize()
  
 contains
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Subroutine to output to a file the aerosol distributions.
-  subroutine aero_dist_output_netcdf(aero_dists, ncid)
-
-    !> Array of aerosol distributions.
-    type(aero_dist_t), intent(in) :: aero_dists
-    !> NetCDF file ID, in data mode
-    integer, intent(in) :: ncid
-
-    character(len=100) :: unit, long_name, standard_name, description
-    integer :: dimid_n_times, dimid_n_modes, dimid_n_specs
-    integer :: n_modes, n_times, n_specs
-    integer :: status, check_dim_size
-    character(len=NF90_MAX_NAME) :: check_name
-    integer, allocatable, dimension(:) :: source
-    real(kind=dp), allocatable, dimension(:) :: radius, std
-    real(kind=dp), allocatable, dimension(:) :: num_conc
-    real(kind=dp), allocatable, dimension(:,:) :: vol_frac
-    integer :: i_time, i_mode
-    integer :: start(1), count(1)
-    integer :: start2(2), count2(2)
-    integer :: start3(3), count3(3)
-
-    ! number of modes isn't defined
-    n_modes = size(aero_dists%mode)
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_dim(ncid, "n_modes", &
-         n_modes, dimid_n_modes))
-    call pmc_nc_check(nf90_enddef(ncid))
-    !
-    n_specs = size(aero_dists%mode(1)%vol_frac)
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_dim(ncid, "n_aero_specs", &
-         n_specs, dimid_n_specs))
-    call pmc_nc_check(nf90_enddef(ncid))
-
-    ! We then create some variables with descriptions
-    ! Things that are 1D
-    !   - diameter (n_modes)
-    !   - names (n_modes)
-    !       - names should be done similar to aero_data species names
-    !   - standard deviations (n_modes)
-    !
-    name='char_radius'
-    unit='m'
-    long_name = 'characteristic_radius'
-    standard_name = 'characteristic_radius'
-    description = 'Characteristic radius, with meaning dependent on mode type'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(radius(n_modes))
-    do i_mode = 1, n_modes
-       radius(i_mode) = aero_dists%mode(i_mode)%char_radius
-    end do
-
-    start = (/ 1 /)
-    count = (/ n_modes /)
-    call pmc_nc_check(nf90_put_var(ncid, varid, radius, &
-         start = start, count = count))
-
-    name='log10_std_dev_radius'
-    unit='m'
-    long_name = 'log10_std_dev_radius' 
-    standard_name = 'log10_std_dev_radius' 
-    description = 'Log base 10 of geometric standard deviation of radius, (m).'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(std(n_modes))
-    do i_mode = 1, n_modes
-       std(i_mode) = aero_dists%mode(i_mode)%log10_std_dev_radius
-    end do
-
-    start = (/ 1 /)
-    count = (/ n_modes /)
-    call pmc_nc_check(nf90_put_var(ncid, varid, std, &
-         start = start, count = count))
-  
-    name='source'
-    unit='(1)'
-    long_name = 'Source number.'
-    standard_name = 'Source number'
-    description = 'Source number.'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_INT, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(source(n_modes))
-    do i_mode = 1, n_modes
-       source(i_mode) = aero_dists%mode(i_mode)%source
-    end do
-
-    start = (/ 1 /)
-    count = (/ n_modes /)
-    call pmc_nc_check(nf90_put_var(ncid, varid, source, &
-         start = start, count = count))   
-    ! Things that are 1D
-    !   - number concentration (n_modes)
-    name='num_conc'
-    unit='#m/^3'
-    long_name = 'total number concentration'
-    standard_name = 'total number concentration'
-    description = 'Total number concentration of mode (#/m^3).'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
-         (/dimid_n_modes/), varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(num_conc(n_modes))
-    do i_mode = 1,n_modes
-       num_conc(i_mode) = aero_dists%mode(i_mode)%num_conc
-    end do
-
-    ! Error checking
-    call assert_msg(754432751, sum(num_conc) > 0.0d0, &
-         "number concentrations are zero. check input files")
-
-    start = (/ 1 /)
-    count = (/ n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, num_conc, &
-         start = start, count = count))
-    ! Things that are 2D
-    !   - vol_frac (n_modes, n_spec)
-    name='vol_frac'
-    unit='(1)'
-    long_name = 'species fractions'
-    standard_name = 'species_fractions'
-    description = 'Species fractions by volume [length \c aero_data%%n_spec].'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
-         (/dimid_n_specs, dimid_n_modes/), varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))    
-
-    allocate(vol_frac(n_specs, n_modes))
-       do i_mode = 1,n_modes
-          vol_frac(:,i_mode) = aero_dists%mode(i_mode)%vol_frac
-       end do
-
-    start2 = (/1,1/)
-    count2 = (/n_specs, n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, vol_frac, &
-         start = start2, count = count2))
-
-  end subroutine aero_dist_output_netcdf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -388,7 +228,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Creates a boundary condition NetCDF for a given grid cell.
+  !> Creates a initial condition NetCDF for a given (i,j) grid column.
   subroutine create_ics(i, j, nz, num_modes, num_aero_species, values, &
        aero_data, mode_diams, mode_std, mode_vol_fracs, mode_source, &
        file_prefix)
@@ -432,53 +272,81 @@ contains
          no3_ratio
     integer :: i_spec
     real(kind=dp) :: total_num_conc
-    real(kind=dp), allocatable :: vol_frac(:)
     integer :: k 
     character(len=50) :: group_name
+    logical, parameter :: groups = .true.
+    real(kind=dp), allocatable :: char_radius(:,:), vol_frac(:,:,:), &
+         vol_frac_std(:,:,:), log10_std_dev_radius(:,:), num_conc(:,:)
+    integer, allocatable :: mode_type(:,:), source(:,:)
+    integer :: n_spec
+    integer :: dimid_nz, dimid_n_modes, dimid_n_specs
+    character(len=AERO_MODE_NAME_LEN) :: mode_name
 
     suffix = '.nc'
-
     write(filename, '(a,a,i3.3,a,i3.3,a)') trim(file_prefix), '_', &
          i,'_',j,trim(suffix)
     call pmc_nc_open_write(filename, ncid)
 
-    do k = 1,nz
-       call pmc_nc_check_msg(nf90_redef(ncid),'in define mode for level')
-       write(group_name,'(a,i3.3)') 'level_', k 
-       call pmc_nc_check_msg(nf90_def_grp(ncid, group_name, ncid_group), &
-            'creating level group')
-       call pmc_nc_check_msg(nf90_enddef(ncid),'end define mode for level')
+    n_spec = aero_data_n_spec(aero_data)
 
-       allocate(aero_dists%mode(num_modes))
+    allocate(mode_type(nz,num_modes))
+    allocate(char_radius(nz,num_modes))
+    allocate(log10_std_dev_radius(nz,num_modes))
+    allocate(num_conc(nz,num_modes))
+    allocate(vol_frac(nz,num_modes,n_spec))
+    allocate(vol_frac_std(nz,num_modes,n_spec))
+    allocate(source(nz,num_modes))
+
+    do k=1,nz
        do i_mode = 1,num_modes
+          mode_name = 'string'
+          mode_type(k,i_mode) = 1
+          char_radius(k,i_mode) = mode_diams(i_mode) / 2.0
+          log10_std_dev_radius(k,i_mode) = dlog10(mode_std(i_mode))
           total_num_conc = 0.0d0
-          aero_dists%mode(i_mode)%name = 'string'
-          aero_dists%mode(i_mode)%type =  1
-          aero_dists%mode(i_mode)%char_radius = &
-               mode_diams(i_mode) / 2.0
-          aero_dists%mode(i_mode)%log10_std_dev_radius = &
-               dlog10(mode_std(i_mode))
           do i_spec = 1,num_aero_species
              total_num_conc = total_num_conc + get_num_conc( &
-                  values(i_mode,i_spec,k), mode_diams(i_mode), mode_std(i_mode), &
-                  aero_data%density(i_spec))
+                  values(i_mode,i_spec,k), mode_diams(i_mode), &
+                  mode_std(i_mode), aero_data%density(i_spec))
           end do
-          aero_dists%mode(i_mode)%num_conc = total_num_conc
-          vol_frac = values(i_mode,:,k) / aero_data%density
-          aero_dists%mode(i_mode)%vol_frac = vol_frac / sum(vol_frac)
-          ! FIXME: Source number
-          aero_dists%mode(i_mode)%source = mode_source(i_mode)
+          num_conc(k,i_mode) =  total_num_conc
+          vol_frac(k,i_mode,:) = values(i_mode,:,k) / aero_data%density
+          vol_frac_std(k,i_mode,:) = 0.0d0
+          source(k,i_mode) = mode_source(i_mode)
        end do
-       call aero_dist_output_netcdf(aero_dists,ncid_group)
-       deallocate(aero_dists%mode)
     end do
+
+    ! output arrays
+    call pmc_nc_check(nf90_redef(ncid))
+    call pmc_nc_check(nf90_def_dim(ncid, "n_aero_modes", n_modes, &
+         dimid_n_modes))
+    call pmc_nc_check(nf90_def_dim(ncid, "n_aero_specs", n_spec, &
+         dimid_n_specs))
+    call pmc_nc_check(nf90_def_dim(ncid, "nz", nz, dimid_nz))
+    call pmc_nc_check(nf90_enddef(ncid))
+
+    call pmc_nc_write_integer_2d(ncid, mode_type, "mode_type", &
+         (/ dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_2d(ncid, char_radius, "char_radius", &
+         (/ dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_2d(ncid, log10_std_dev_radius, &
+         "log10_std_dev_radius", (/ dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_2d(ncid, num_conc, "num_conc", &
+         (/ dimid_nz, dimid_n_modes /))
+    call pmc_nc_write_real_3d(ncid, vol_frac, "vol_frac", &
+         (/ dimid_nz, dimid_n_modes, dimid_n_specs /))
+    call pmc_nc_write_real_3d(ncid, vol_frac_std, "vol_frac_std", &
+         (/ dimid_nz, dimid_n_modes, dimid_n_specs /))
+    call pmc_nc_write_integer_2d(ncid, source, "source", &
+         (/ dimid_nz, dimid_n_modes /))
+
     call pmc_nc_check(nf90_close(ncid))
 
   end subroutine create_ics
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Load aerosol data from WRF boundary condition file.
+  !> Load aerosol data from WRF initial condition file.
   subroutine load_data_aero(mass_conc, num_mode, num_spec, nx, ny, nz, &
        spec_name, density, ncid, aero_data)
 

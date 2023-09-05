@@ -1,7 +1,7 @@
 dimspec    bins    -     namelist=num_bins               c          n_bins 
 dimspec    edges   -     namelist=num_edges             c          n_edges 
-state     real   bin_centers      {bins}   pmc            1 -        h2       "bin_centers     " "                " "                "
-state     real   bin_edges        {edges}  pmc            1 -        h2       "bin_edges       " "                " "                "
+state     real   bin_centers      {bins}   pmc            1 -        h3       "bin_centers     " "                " "                "
+state     real   bin_edges        {edges}  pmc            1 -        h3       "bin_edges       " "                " "                "
 state     real   -                ikjf     num_dist     -   -        -        "-               " "-               " "-               "
 state     real   num_a001         ikjf     num_dist       1 -        h3       "num_a001        " "num, aerosol bin 001" "#               "
 state     real   num_a002         ikjf     num_dist       1 -        h3       "num_a002        " "num, aerosol bin 002" "#               "

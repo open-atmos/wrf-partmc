@@ -6,3 +6,6 @@ create_*
 *.nc
 *.tar.gz
 *_d01
+aero_data.dat
+gas_data.dat
+compute_stats

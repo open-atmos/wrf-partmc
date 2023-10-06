@@ -1976,6 +1976,44 @@ contains
        end do
        end do
        end do
+    else if (config_flags%do_deformation_xz) then
+
+       r0 = .2d0
+       do j = pmc_js,pmc_je
+       do k = pmc_ks,pmc_ke
+       do i = pmc_is,pmc_ie
+          b = (float(i) - .5 * (global_nx)- 1)/ (global_nx-1)
+          a = (float(i-1) - .5 * (global_nx)- 1)/ (global_nx-1)
+          d = ((grid%phb(i,k+1,j))/g &
+              / config_flags%ztop) - .5
+          c = ((grid%phb(i,k,j))/g &
+              / config_flags%ztop) - .5
+          q_value = 0.0
+          do i_mode = 1,n_modes
+             q_value = 0.0d0
+             do ix = 1,5
+             do iy = 1,5
+                x_pos = (.5*(b-a) * gauss_points(ix) + .5*(a+b))
+                z_pos = (.5*(d-c) * gauss_points(iy) + .5*(d+c))
+                xrad = sqrt((x_pos)**2 + (z_pos)**2)
+                q_value = q_value + gauss_weights(ix)*gauss_weights(iy) * &
+                     (10d9*exp(-(xrad/r0)**2))
+             end do
+             end do
+             if (xrad < r0) then
+                aero_dist_init%mode(i_mode)%num_conc = max(q_value / 4.0, 1d-15)
+             else
+                aero_dist_init%mode(i_mode)%num_conc = 1.0d7
+             end if
+          end do
+
+          call aero_state_add_aero_dist_sample(aero_states(i,k,j), &
+               aero_data, aero_dist_init, 1.0/real(grid%alt(i,k,j),kind=dp), & 
+               1.0d0, 0d0, .true., .true.)
+       end do
+       end do
+       end do
+
     else if (config_flags%do_ideal_init_cond .and. &
         (config_flags%periodic_x .and. config_flags%periodic_y)) then
        x0 = global_nx / 2

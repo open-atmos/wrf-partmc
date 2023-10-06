@@ -1436,7 +1436,7 @@ BENCH_END(spec_bdy_uv_tim)
        DO ij = 1 , grid%num_tiles
 
         !  advance the mass in the column, theta, and calculate ww
-
+#ifndef PMC_CONSTANT_VEL
 BENCH_START(advance_mu_t_tim)
          CALL advance_mu_t( grid%ww, ww1, grid%u_2, grid%u_save, grid%v_2, grid%v_save, &
                           grid%mu_2, grid%mut, muave, grid%muts, grid%muu, grid%muv,    &
@@ -1457,6 +1457,7 @@ BENCH_START(advance_mu_t_tim)
                           grid%j_start(ij), grid%j_end(ij),  &
                           k_start    , k_end                )
 BENCH_END(advance_mu_t_tim)
+#endif
        ENDDO
        !$OMP END PARALLEL DO
 

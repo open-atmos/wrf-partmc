@@ -30,6 +30,7 @@ rconfig logical do_hill namelist,partmc 1 .false. - "do_hill" "idealized hill te
 rconfig logical do_zero_background namelist,partmc 1 .false. - "do_zero_background" "zero background on/off" ""
 rconfig logical do_constant namelist,partmc 1 .false. - "do_constant" "constant initial condition on/off" ""
 rconfig logical do_scm namelist,partmc 1 .false. - "do_scm" "SCM mode on/off" ""
+rconfig logical do_deformation_xz namelist,partmc 1 .false. - "do_deformation_xz" "Deformation testcase on/off" ""
 rconfig logical do_ideal_init_cond namelist,partmc 1 .false. - "do_ideal_init_cond" "idealized init condition with real case on/off" ""
 rconfig logical do_restart namelist,partmc 1 .false. - "do_restart" "restart simulations on/off" ""
 rconfig logical do_advanced_process namelist,partmc 1 .true. - "do_advanced_process" "advanced partmc processing on/off" ""

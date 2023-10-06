@@ -298,6 +298,50 @@ em_rotational : wrf
 		echo "==========================================================================" ; \
 		echo " " ; \
 	fi
+
+em_deformation_xz : wrf
+	@/bin/rm -f ideal.exe > /dev/null 2>&1
+	@/bin/rm -f wrf.exe   > /dev/null 2>&1
+	@ echo '--------------------------------------'
+	( cd main ; $(MAKE) RLFLAGS="$(RLFLAGS)" MODULE_DIRS="$(ALL_MODULES)" SOLVER=em IDEAL_CASE=deformation_xz em_ideal )
+	( cd test/em_deformation_xz ; /bin/rm -f wrf.exe ; ln -s ../../main/wrf.exe . )
+	( cd test/em_deformation_xz ; /bin/rm -f ideal.exe ; ln -s ../../main/ideal.exe . )
+	( cd test/em_deformation_xz ; /bin/rm -f README.namelist ; ln -s ../../run/README.namelist . )
+	( cd test/em_deformation_xz ; /bin/rm -f bulkdens.asc_s_0_03_0_9 ; ln -s ../../run/bulkdens.asc_s_0_03_0_9 . )
+	( cd test/em_deformation_xz ; /bin/rm -f bulkradii.asc_s_0_03_0_9 ; ln -s ../../run/bulkradii.asc_s_0_03_0_9 .)
+	( cd test/em_deformation_xz ; /bin/rm -f capacity.asc ; ln -s ../../run/capacity.asc . )
+	( cd test/em_deformation_xz ; /bin/rm -f coeff_p.asc ; ln -s ../../run/coeff_p.asc . )
+	( cd test/em_deformation_xz ; /bin/rm -f coeff_q.asc ; ln -s ../../run/coeff_q.asc . )
+	( cd test/em_deformation_xz ; /bin/rm -f constants.asc ; ln -s ../../run/constants.asc . )
+	( cd test/em_deformation_xz ; /bin/rm -f kernels.asc_s_0_03_0_9 ; ln -s ../../run/kernels.asc_s_0_03_0_9 . )
+	( cd test/em_deformation_xz ; /bin/rm -f kernels_z.asc ; ln -s ../../run/kernels_z.asc . )
+	( cd test/em_deformation_xz ; /bin/rm -f masses.asc ; ln -s ../../run/masses.asc . )
+	( cd test/em_deformation_xz ; /bin/rm -f termvels.asc ; ln -s ../../run/termvels.asc . )
+	( cd run ; /bin/rm -f ideal.exe ; ln -s ../main/ideal.exe . )
+	( cd run ; if test -f namelist.input ; then \
+    /bin/cp -f namelist.input namelist.input.backup.`date +%Y-%m-%d_%H_%M_%S` ; fi ; \
+    /bin/rm -f namelist.input ; cp ../test/em_deformation_xz/namelist.input . )
+	( cd run ; /bin/rm -f input_sounding ; ln -s ../test/em_deformation_xz/input_sounding . )
+	@echo " "
+	@echo "=========================================================================="
+	@echo "build started:   $(START_OF_COMPILE)"
+	@echo "build completed:" `date`
+	@if test -e main/wrf.exe -a -e main/ideal.exe ; then \
+	  echo " " ; \
+	  echo "--->                  Executables successfully built                  <---" ; \
+	  echo " " ; \
+	  ls -l main/*.exe ; \
+	  echo " " ; \
+	  echo "==========================================================================" ; \
+	  echo " " ; \
+	else \
+	  echo " " ; \
+	  echo "---> Problems building executables, look for errors in the build log  <---" ; \
+	  echo " " ; \
+	  echo "==========================================================================" ; \
+	  echo " " ; \
+	fi
+
 em_squall2d_x : wrf
 	@/bin/rm -f ideal.exe > /dev/null 2>&1
 	@/bin/rm -f wrf.exe   > /dev/null 2>&1

@@ -528,6 +528,7 @@ CONTAINS
    if (head_grid%chem_opt == WRF_PARTMC) then
    ! Initialize PartMC
       if (config_flags%do_uniform .or. config_flags%do_rotational .or. &
+           config_flags%do_deformation_xz .or. &
            config_flags%do_ideal_init_cond) then
          call init_wrf_partmc_idealized(head_grid, scenario, env_states, &
               aero_data, aero_states, gas_data, gas_states, pmc_is, pmc_ie, &

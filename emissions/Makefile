@@ -7,6 +7,7 @@ FFLAGS= -g -fimplicit-none -W -Wall -Wconversion -Wunderflow -Wimplicit-interfac
 
 OBJ=  \
   ../partmc/src/util.o \
+  ../partmc/src/sys.o \
   ../partmc/src/constants.o \
   ../partmc/src/netcdf.o  \
   ../partmc/src/aero_component.o \
@@ -55,7 +56,6 @@ LIB_BUNDLED     = \
 
 make_emission:
 	$(F90) make_emissions.F90 $(INC) $(LIBS) $(OBJ) $(FFLAGS) -o create_emissions
-	$(F90) make_emissions_ideal.F90 $(INC) $(LIBS) $(OBJ) $(FFLAGS) -o create_emissions_ideal
 	$(F90) compute_emission_statistics.F90 $(INC) $(LIBS) $(OBJ) $(FFLAGS) -o compute_stats
 convert_emiss: convert_emiss.o
 	$(RANLIB) ../WRFV3/main/libwrflib.a

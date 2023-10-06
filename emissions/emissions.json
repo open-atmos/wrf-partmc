@@ -1,0 +1,1454 @@
+{
+    "sources": [
+        {
+            "source_name": "agr_fires",
+            "source_class": 1,
+            "weight_class": 1,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "aircraft",
+            "source_class": 2,
+            "weight_class": 1,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "biogenic",
+            "source_class": 3,
+            "weight_class": 1,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "cooking",
+            "source_class": 4,
+            "weight_class": 2,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "egu_biomass",
+            "source_class": 5,
+            "weight_class": 3,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "egu_coalBrown",
+            "source_class": 6,
+            "weight_class": 3,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "egu_coalHard_nop",
+            "source_class": 7,
+            "weight_class": 3,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "egu_coalHard_pul",
+            "source_class": 8,
+            "weight_class": 3,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "egu_natgas",
+            "source_class": 9,
+            "weight_class": 3,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "egu_oil",
+            "source_class": 10,
+            "weight_class": 3,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "egu_other",
+            "source_class": 11,
+            "weight_class": 3,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "nonroad_diesel",
+            "source_class": 12,
+            "weight_class": 4,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "nonroad_gas2strk",
+            "source_class": 13,
+            "weight_class": 4,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "nonroad_gas4strk",
+            "source_class": 14,
+            "weight_class": 4,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "nonroad_other",
+            "source_class": 15,
+            "weight_class": 4,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_agr",
+            "source_class": 16,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_coal",
+            "source_class": 17,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_fdust",
+            "source_class": 18,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_gasops",
+            "source_class": 19,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_indus_oil",
+            "source_class": 20,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_indus_wood",
+            "source_class": 21,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_natgas",
+            "source_class": 22,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_oilgas",
+            "source_class": 23,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_other",
+            "source_class": 24,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "np_rail",
+            "source_class": 25,
+            "weight_class": 5,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "onroad_hddiesel",
+            "source_class": 26,
+            "weight_class": 6,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "onroad_hdgas",
+            "source_class": 27,
+            "weight_class": 6,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "onroad_lddiesel",
+            "source_class": 28,
+            "weight_class": 6,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "onroad_ldgas",
+            "source_class": 29,
+            "weight_class": 6,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "onroad_other",
+            "source_class": 30,
+            "weight_class": 6,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_biomass",
+            "source_class": 31,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_coal",
+            "source_class": 32,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_fdust",
+            "source_class": 33,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_gasops",
+            "source_class": 34,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_indus_wood",
+            "source_class": 35,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_inuds_oil",
+            "source_class": 36,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_natgas",
+            "source_class": 37,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_oilgas",
+            "source_class": 38,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_other",
+            "source_class": 39,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "pt_rail",
+            "source_class": 40,
+            "weight_class": 7,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "res_diesel",
+            "source_class": 41,
+            "weight_class": 8,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "res_fireplace",
+            "source_class": 42,
+            "weight_class": 8,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "res_furnace",
+            "source_class": 43,
+            "weight_class": 8,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "res_openfire",
+            "source_class": 44,
+            "weight_class": 8,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "res_other",
+            "source_class": 45,
+            "weight_class": 8,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "res_woodstove",
+            "source_class": 46,
+            "weight_class": 8,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "rx_fires",
+            "source_class": 47,
+            "weight_class": 9,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "ship_diesel",
+            "source_class": 48,
+            "weight_class": 9,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "ship_int",
+            "source_class": 49,
+            "weight_class": 9,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "source_name": "wild_fires",
+            "source_class": 50,
+            "weight_class": 9,
+            "modes": [
+                {
+                    "diameter": 3.618e-08,
+                    "std": 1.6,
+                    "fractions": [
+                        0,
+                        0.2,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "diameter": 7.981e-08,
+                    "std": 1.8,
+                    "fractions": [
+                        0.0,
+                        0.8,
+                        0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        }
+    ]
+}

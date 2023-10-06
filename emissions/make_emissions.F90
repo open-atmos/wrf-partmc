@@ -445,7 +445,6 @@ program make_emissions
      ! We should make some summary statistics
      call create_statistics(gas_emissions, aero_emissions, n_source_classes, &
           nx, ny, nz, nt, n_species, gas_data, gas_data_n_spec(gas_data), dx)
-
   end if
 
   call pmc_mpi_barrier()
@@ -466,79 +465,9 @@ program make_emissions
   allocate(gas_emissions_patch(ie_local - is_local + 1, ny, nz, nt, &
        n_gas_spec_partmc))
 
-!  if (pmc_mpi_rank() == 0) then
-!     do i_proc = 1,n_proc -1
-!        i_send_s = i_proc * (nx / n_proc) + rem + 1
-!        i_send_e = (i_proc + 1)  * (nx / n_proc) + rem
-!        send_size_a = n_species*n_source_classes * (i_send_e - i_send_s + 1) * &
-!           ny * nz * nt
-!        print*, 'send size', send_size_a, i_send_s, i_send_e
-!        call mpi_send(aero_emissions(i_send_s:i_send_e,:,:,:,:,:), &
-!             send_size_a, MPI_DOUBLE_PRECISION, i_proc, i_proc, MPI_COMM_WORLD, &
-!             ierr)
-!     end do
-!  else
-!     recv_size_a = n_species*n_source_classes * (ie_local - is_local + 1) * &
-!        ny * nz * nt
-!     print*, 'receiving', recv_size_a
-!     call mpi_recv(aero_emissions_patch, recv_size_a, MPI_DOUBLE_PRECISION, &
-!          0, pmc_mpi_rank(), MPI_COMM_WORLD, IERR)
-!  end if
-
-!  if (pmc_mpi_rank() == 0) then
-!     allocate(send_counts_a(pmc_mpi_size()))
-!     allocate(displs_a(pmc_mpi_size()))
-!     allocate(send_counts_g(pmc_mpi_size()))
-!     allocate(displs_g(pmc_mpi_size()))
-!  end if
-
-!  root = 0
-!  recv_size_a = n_species*n_source_classes * (ie_local - is_local + 1) * &
-!       ny * nz * nt
-!  recv_size_g =  n_gas_spec_partmc * ( ie_local - is_local + 1) * ny * nz * nt
-
-!  call mpi_gather(recv_size_a, 1, MPI_INTEGER, send_eounts_a, 1, &
-!       MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!  call mpi_gather(recv_size_g, 1, MPI_INTEGER, send_counts_g, 1, &
-!       MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!
-!  if (pmc_mpi_rank() == 0) then
-!     displs_a = 0
-!     displs_g = 0
-!     do i_proc = 2, pmc_mpi_size()
-!        displs_a(i_proc) = displs_a(i_proc - 1) + send_counts_a(i_proc-1)
-!        displs_g(i_proc) = displs_g(i_proc - 1) + send_counts_g(i_proc-1)
-!     end do
-!  end if
-!
-!  if (pmc_mpi_rank() == 0) then
-!     print*, 'send counts', send_counts_a
-!     print*, 'displacements', displs_a
-!  end if
-
-!  ! count, block length, stride, oldtype
-!  stride = 1
-!  block_length = nt * n_source_classes * n_species
-
-!  call MPI_Type_vector(1, block_length, stride, &
-!       MPI_DOUBLE_PRECISION, grid_emission)
-!  call MPI_Type_commit(grid_emission, ierr)
-!  call mpi_scatterv(aero_emissions, send_counts_a, displs_a, &
-!       MPI_DOUBLE_PRECISION, aero_emissions_patch, recv_size_a, &
-!       MPI_DOUBLE_PRECISION, root, MPI_COMM_WORLD, ierr)
-!call mpi_scatterv(aero_emissions, send_counts_a, displs_a, &
-!       MPI_DOUBLE_PRECISION, aero_emissions_patch, recv_size_a, &
-!       MPI_DOUBLE_PRECISION, root, MPI_COMM_WORLD, ierr)
-!  call mpi_scatterv(gas_emissions, send_counts_g, displs_g, &
-!       MPI_DOUBLE_PRECISION, gas_emissions_patch,  recv_size_g, &
-!       MPI_DOUBLE_PRECISION, root, MPI_COMM_WORLD, ierr)
-
-  ! Create the WRF-Chem emissions
   if (pmc_mpi_rank() == 0) then
      call make_sectional_emissions(gas_emissions, aero_emissions, nx, ny, nz, &
           nt, n_source_classes, n_species, n_gas_spec_partmc, dx, gas_data)
-!     call make_bulk_emissions(gas_emissions, aero_emissions, nx, ny, nz, &
-!          nt, n_source_classes, n_species, n_gas_spec_partmc, dx, gas_data)
   end if
 
   if (only_sectional) then
@@ -787,7 +716,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Subroutine to output to a file the aerosol emission
+  !> Subroutine to output to a file the aerosol emission.
   subroutine aero_dist_output_netcdf(aero_emissions, ncid)
 
     !> Aerosols emissions for all time.
@@ -814,13 +743,11 @@ contains
 
     integer :: varid_aero_source , dimid_aero_source
 
-    ! First we have to define some dimensions
-    ! Time was defined already, so let's find it again
     status = nf90_inq_dimid(ncid, "n_times", dimid_n_times)
     call pmc_nc_check(nf90_Inquire_Dimension(ncid, dimid_n_times, check_name, &
             check_dim_size))
     n_times = check_dim_size
-    ! number of modes isn't defined
+
     n_modes = size(aero_emissions(1)%mode) 
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_modes", &
@@ -833,18 +760,12 @@ contains
          n_specs, dimid_n_specs))
     call pmc_nc_check(nf90_enddef(ncid))
 
-    ! We then create some variables with descriptions
-    ! Things that are 1D
-    !   - diameter (n_modes)
-    !   - names (n_modes)
-    !       - names should be done similar to aero_data species names
-    !   - standard deviations (n_modes)
-    !
     name='char_radius'
     unit='m'
     long_name = 'characteristic_radius'
     standard_name = 'characteristic_radius'
-    description = 'Characteristic radius, with meaning dependent on mode type'
+    description = 'Characteristic radius, with meaning dependent on mode' &
+         // ' type (m)'
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, dimid_n_modes, &
          varid))
@@ -861,7 +782,6 @@ contains
     call pmc_nc_check(nf90_put_var(ncid, varid, radius, &
          start = start, count = count))
 
-    ! 
     name='log10_std_dev_radius'
     unit='m'
     long_name = 'log10_std_dev_radius' 
@@ -883,32 +803,12 @@ contains
     call pmc_nc_check(nf90_put_var(ncid, varid, std, &
          start = start, count = count))
  
-    !
-    !unit='(1)'
-    !aero_source_names = ""
-    !do i_mode = 1,n_modes
-    !   aero_source_names((len_trim(aero_source_names) + 1):) &
-    !        = trim(aero_emissions(1)%mode(i_mode)%name)
-    !   if (i_mode < n_modes) then
-    !      aero_source_names((len_trim(aero_source_names) + 1):) = ","
-    !   end if
-    !end do
-    !call pmc_nc_check(nf90_redef(ncid))
-    !call pmc_nc_check(nf90_def_var(ncid, "aero_source", NF90_INT, &
-    !     dimid_n_modes, varid_aero_source))
-    !call pmc_nc_check(nf90_put_att(ncid, varid_aero_source, "names", &
-    !     aero_source_names))
-    !call pmc_nc_check(nf90_put_att(ncid, varid_aero_source, "description", &
-    !     "dummy dimension variable (no useful value) - read source names " &
-    !     // "as comma-separated values from the 'names' attribute"))
-    !call pmc_nc_check(nf90_enddef(ncid))
-
-    ! 
     name='source_id'
     unit='(1)'
-    long_name = 'Source number.'
+    long_name = 'Source number'
     standard_name = 'Source number'
-    description = 'Source number for each emission mode.'
+    description = 'Source ID number for each emission mode. Maps to names in ' &
+         // 'aero_source'
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_INT, dimid_n_modes, &
          varid))
@@ -925,13 +825,11 @@ contains
     call pmc_nc_check(nf90_put_var(ncid, varid, source, &
          start = start, count = count))
 
-    ! Things that are 2D
-    !   - number concentration (times, n_modes)
     name='num_conc'
-    unit='# m^{-3}'
-    long_name = 'total number concentration'
-    standard_name = 'total number concentration'
-    description = 'Total number concentration of mode (#/m^3).'
+    unit='# m^{-2} s^{-1}'
+    long_name = 'total number concentration flux'
+    standard_name = 'total number concentration flux'
+    description = 'Total number concentration flux of mode (#/m^2/s^1).'
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
          (/dimid_n_modes, dimid_n_times/), varid))
@@ -948,8 +846,7 @@ contains
     count2 = (/ n_modes, n_times/)
     call pmc_nc_check(nf90_put_var(ncid, varid, num_conc, &
          start = start2, count = count2))
-    ! Things that are 3D
-    !   - vol_frac (times, n_modes, n_spec)
+
     name='vol_frac'
     unit='(1)'
     long_name = 'species fractions'
@@ -1459,8 +1356,6 @@ contains
             ny, dimid_ny))
 !       call pmc_nc_check(nf90_def_dim(ncid, "nz", &
 !            nz, dimid_nz))
-       print*, nx, ny, nz
-       print*,shape( em3rs)
        call pmc_nc_check(nf90_enddef(ncid)) 
        ! Collapse gas species
        do i_spec = 1, NRADM
@@ -1676,8 +1571,9 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !> Outputs summary statistics for the emissions.
   subroutine create_statistics(gas_emissions, aero_emissions, n_source_classes, &
-       nx, ny, nz, nt, n_species, gas_data, n_gas_species, dx) !, emission_data)
+       nx, ny, nz, nt, n_species, gas_data, n_gas_species, dx)
 
     !> Gas emissions
     real(kind=dp), dimension(nx, ny, nz, nt, n_gas_species), &
@@ -1701,8 +1597,6 @@ contains
     integer, intent(in) :: n_gas_species
     !
     real(kind=dp), intent(in) :: dx
-    !
-!    type(emission_data_t), intent(in) :: emission_data
 
     real(kind=dp), dimension(nt) :: source_values
     integer, dimension(n_source_classes) :: total_cells
@@ -1724,14 +1618,12 @@ contains
         total_cells(i_source) = get_total_cells(aero_emissions(:,:,:,:,i_source,:), &
             nx,ny,nz,nt,n_species)
         ! Lets sum everything and divide by the number of total cells?
-        print*, i_source
         do i = 1,nx
         do j = 1,ny
         do i_spec = 1,n_species
             masses = aero_emissions(i,j,k,i_time,i_source,:)
             if (sum(masses) > 0.0d0) then
                mass_frac = masses / sum(masses)
-!               print*,i,j,i_source, mass_frac
                call stats_1d_add(mass_fractions(i_source), mass_frac)
             end if
         end do
@@ -1757,9 +1649,7 @@ contains
         end do
     end do
 
-
     out_filename = "emission_statistics.nc"
-    print*, n_source_classes
     call pmc_nc_open_write("emission_statistics.nc", ncid)
     do i_source = 1,n_source_classes
        write(var_name,'(A,I2.2)') "source_", i_source

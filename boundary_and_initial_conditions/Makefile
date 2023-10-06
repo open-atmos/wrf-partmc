@@ -36,6 +36,5 @@ make_boundary_conditions: $(MODULES)
 
 make_initial_conditions: $(MODULES)
 	$(FC) make_ics.F90 $(MODULES) $(INC) $(LIBS) $(FFLAGS) -o create_ics
-#	$(FC) make_ics_ideal.F90 $(MODULES) $(INC) $(LIBS) $(FFLAGS) -o create_ics_ideal
 clean:
 	rm -rf create_bcs create_ics

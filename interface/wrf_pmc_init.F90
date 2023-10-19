@@ -735,7 +735,7 @@ contains
             .and. (aero_source_names(i_str:i_str) /= ","))
           i_str = i_str + 1
        end do
-       call assert(840982478, i_str > 1)
+       call assert(525725933, i_str > 1)
        source_name(i_source) = aero_source_names(1:(i_str-1))
        aero_source_names = aero_source_names((i_str+1):)
     end do
@@ -1384,7 +1384,7 @@ contains
             .and. (aero_source_names(i_str:i_str) /= ","))
           i_str = i_str + 1
        end do
-       call assert(840982478, i_str > 1)
+       call assert(990455704, i_str > 1)
        source_name(i_source) = aero_source_names(1:(i_str-1))
        aero_source_names = aero_source_names((i_str+1):)
     end do

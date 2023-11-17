@@ -24,8 +24,8 @@ wrfout*
 # WRF backup namelists
 namelist.input.backup*
 # WPS
-GRIBFILE*
-FILE*
+WPS/GRIBFILE*
+WPS/FILE*
 #
 WRFV3/external/esmf_time_f90/*.f
 WRFV3/external/io_netcdf/*.f

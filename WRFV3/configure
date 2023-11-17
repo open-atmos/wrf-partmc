@@ -595,9 +595,8 @@ if [ -n "$WRF_CHEM" ] ; then
 else
   compileflags="${compileflags} "
 fi
-
-if [ -n "$PMC_USE_MOSAIC" ] ; then
-  if [ $PMC_USE_MOSAIC = 1 ] ; then
+if [ -n "MOSAIC" ] ; then
+  if [ $MOSAIC = 1 ] ; then
     echo building WRF-PartMC with MOSAIC option
     compileflags="${compileflags}!-DPMC_USE_MOSAIC"
   else

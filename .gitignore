@@ -11,7 +11,8 @@ WRFV3/inc/*.inc
 *.log
 slurm*
 # WRF rsl files
-rsl*
+rsl.out.*
+rsl.error.*
 # debug files
 gout*
 # WRF meteorology files

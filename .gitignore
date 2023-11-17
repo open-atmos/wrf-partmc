@@ -55,7 +55,6 @@ WRFV3/test/em_real/bulkradii.asc_s_0_03_0_9
 WRFV3/test/em_real/grib2map.tbl
 WRFV3/test/em_real/gribmap.txt
 WRFV3/test/em_real/kernels.asc_s_0_03_0_9
-WRFV3/test/em_real/namelist.input
 WRFV3/test/em_real/p3_lookup_table_1.dat
 WRFV3/test/em_real/tr49t67
 WRFV3/test/em_real/tr49t85

@@ -1,5 +1,4 @@
-# WRF created include files #
-*.inc
+WRFV3/inc/*.inc
 # WRF automated f90 files #
 *.f90
 # Compiled source #

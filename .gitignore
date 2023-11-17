@@ -1,5 +1,4 @@
-# WRF created include files #
-*.inc
+WRFV3/inc/*.inc
 # WRF automated f90 files #
 *.f90
 # Compiled source #
@@ -12,7 +11,8 @@
 *.log
 slurm*
 # WRF rsl files
-rsl*
+rsl.out.*
+rsl.error.*
 # debug files
 gout*
 # WRF meteorology files
@@ -24,8 +24,8 @@ wrfout*
 # WRF backup namelists
 namelist.input.backup*
 # WPS
-GRIBFILE*
-FILE*
+WPS/GRIBFILE*
+WPS/FILE*
 #
 WRFV3/external/esmf_time_f90/*.f
 WRFV3/external/io_netcdf/*.f
@@ -55,7 +55,6 @@ WRFV3/test/em_real/bulkradii.asc_s_0_03_0_9
 WRFV3/test/em_real/grib2map.tbl
 WRFV3/test/em_real/gribmap.txt
 WRFV3/test/em_real/kernels.asc_s_0_03_0_9
-WRFV3/test/em_real/namelist.input
 WRFV3/test/em_real/p3_lookup_table_1.dat
 WRFV3/test/em_real/tr49t67
 WRFV3/test/em_real/tr49t85

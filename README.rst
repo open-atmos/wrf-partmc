@@ -24,6 +24,7 @@ And if you have access to MOSAIC:
 In order to compile with MOSAIC, set the environmental variable:
 
    export MOSAIC=1
+   export WRF_CHEM=1
 
 such that MOSAIC is included in the WRF-PartMC build process.
 To configure and compile, follow the process for WRF which is:

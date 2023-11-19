@@ -1469,7 +1469,6 @@ contains
     integer :: i_index, j_index, k_index
     integer :: i,j,k, i_part
     real(kind=dp) :: flux, prob, dest_vol, source_vol
-    real(kind=dp), parameter :: min_prob = 1.0d-4
 
     i_index = env_state%ix
     j_index = env_state%iy
@@ -1507,15 +1506,13 @@ contains
        do k = pmc_ks,pmc_ke
           if (k .ne. k_index) then
              prob = env_state%prob_vert_diffusion(k,i_class)
-             if (prob > 1.0d-6) then
-                dest_vol = env_states(i_index,k,j_index)%cell_volume
-                flux = prob * num_conc_old
-                num_conc_new(i_index,k,j_index) = &
-                     num_conc_new(i_index,k,j_index) + flux * &
-                     (dest_vol / source_vol)
-                num_conc_new(i_index,k_index,j_index) = &
-                     num_conc_new(i_index,k_index,j_index) - flux
-             end if
+             dest_vol = env_states(i_index,k,j_index)%cell_volume
+             flux = prob * num_conc_old
+             num_conc_new(i_index,k,j_index) = &
+                  num_conc_new(i_index,k,j_index) + flux * &
+                  (dest_vol / source_vol)
+             num_conc_new(i_index,k_index,j_index) = &
+                  num_conc_new(i_index,k_index,j_index) - flux
           end if
        end do
     else ! Real case
@@ -1610,15 +1607,13 @@ contains
           do k = pmc_ks,pmc_ke
              if (k .ne. k_index) then
                 prob = env_state%prob_vert_diffusion(k,i_class)
-!                if (prob > 1.0d-6) then
-                   dest_vol = env_states(i_index,k,j_index)%cell_volume
-                   flux = prob * num_conc_old
-                   num_conc_new(i_index,k,j_index) = &
-                        num_conc_new(i_index,k,j_index) + flux  * &
-                        (dest_vol / source_vol)
-                   num_conc_new(i_index,k_index,j_index) = &
-                        num_conc_new(i_index,k_index,j_index) - flux
-!                end if
+                dest_vol = env_states(i_index,k,j_index)%cell_volume
+                flux = prob * num_conc_old
+                num_conc_new(i_index,k,j_index) = &
+                     num_conc_new(i_index,k,j_index) + flux  * &
+                     (dest_vol / source_vol)
+                num_conc_new(i_index,k_index,j_index) = &
+                     num_conc_new(i_index,k_index,j_index) - flux
              end if
           end do
        end if
@@ -2401,7 +2396,6 @@ contains
     real(kind=dp) :: adjusted_prob
     real(kind=dp) :: prob
     real(kind=dp), parameter :: remainder_eps = 1.0d-8
-    real(kind=dp), parameter :: min_prob = 0.0d0
     type(env_state_t) :: env_state
     real(kind=dp) :: dest_vol, source_vol
     integer :: i, j, k, i_class, prob_count
@@ -2466,7 +2460,7 @@ contains
        do i = 1,prob_count
           prob = probs(i)
           adjusted_prob = min(prob / remainder_prob, 1.0d0)
-          if (prob > min_prob .and. remainder_prob >= remainder_eps) then
+          if (remainder_prob >= remainder_eps) then
              dest_i = source_i + i_offset(perm(i))
              dest_j = source_j + j_offset(perm(i))
              dest_k = source_k + k_offset(perm(i))

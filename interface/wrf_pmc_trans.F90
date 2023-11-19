@@ -137,7 +137,7 @@ contains
 
        do j = j_start,j_end 
        do i = i_start,i_end
-          call compute_vertical_diffusion_probs(grid, &
+          call compute_vertical__probs(grid, &
                env_states(i,pmc_ks:pmc_ke,j), global_nz, &
                aero_weight_array_n_class(aero_states(i,pmc_ks,j)%awa), &
                config_flags%vertmix_onoff)
@@ -411,7 +411,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> Compute vertical probabilities.
-  subroutine compute_vertical_diffusion_probs(grid, env_states, nz, n_class, &
+  subroutine compute_vertical_probs(grid, env_states, nz, n_class, &
        do_vertmix)
 
     !> WRF grid.
@@ -559,7 +559,7 @@ contains
        end do
     end do
 
-  end subroutine compute_vertical_diffusion_probs
+  end subroutine compute_vertical__probs
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

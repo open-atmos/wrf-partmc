@@ -10,6 +10,7 @@ reg_format = '{:9} {:6} {:16} {:8} {:12} {:3} {:8} {:8} "{:16}" "{:16}" "{:16}"\
 hist = "h2"
 hist_3 = "h3"
 ss = ["001","003","006","010"]
+ss_label = ["0.1", "0.3", "0.6", "1.0"]
 
 f = open('registry.partmc_process','w')
 
@@ -25,8 +26,8 @@ type = "real"
 dim = "{bins}"
 var_name = "bin_centers"
 name = "bin_centers"
-description = ""
-units = ""
+description = "diameter bin centers"
+units = "m"
 string = reg_format.format(var, type, var_name,
        dim, 'pmc', 1, '-', hist_3, name, description, units)
 f.write(string)
@@ -36,8 +37,8 @@ type = "real"
 dim = "{edges}"
 var_name = "bin_edges"
 name = "bin_edges"
-description = ""
-units = ""
+description = "diameter bin edges"
+units = "m"
 string = reg_format.format(var,type, var_name,
        dim, 'pmc', 1, '-', hist_3, name, description, units)
 f.write(string)
@@ -73,7 +74,7 @@ for i_spec in range(len(species)):
 
 # Bulk variables
 dim = "ikj"
-units = ""
+units = "kg m^-3"
 array_name = "pmc"
 var_name = "density_dry_air"
 name = "density_dry_air"
@@ -83,7 +84,7 @@ string = reg_format.format(var, type, var_name,
 f.write(string)
 
 dim = "ikj"
-units = ""
+units = "K"
 array_name = "pmc"
 var_name = "temperature"
 name = "temperature"
@@ -104,7 +105,7 @@ f.write(string)
 
 # Bulk variables
 dim = "ikj"
-units = ""
+units = "kg m^-3"
 array_name = "pmc"
 var_name = "tot_mass_conc"
 name = "tot_mass_conc"
@@ -114,7 +115,7 @@ string = reg_format.format(var, type, var_name,
 f.write(string)
 
 dim = "ikj"
-units = ""
+units = "# m^-3"
 array_name = "pmc"
 var_name = "tot_num_conc"
 name = "tot_num_conc"
@@ -124,7 +125,7 @@ string = reg_format.format(var, type, var_name,
 f.write(string)
 
 dim = "ikj"
-units = ""
+units = "# m^-3"
 array_name = "pmc"
 var_name = "tot_wet_num_conc"
 name = "tot_wet_num_conc"
@@ -134,7 +135,7 @@ string = reg_format.format(var, type, var_name,
 f.write(string)
 
 dim = "ikj"
-units = ""
+units = "kg m^-3"
 array_name = "pmc"
 var_name = "tot_hydrophobic_mass_conc"
 name = "tot_hydrophobic_mass_conc"
@@ -144,7 +145,7 @@ string = reg_format.format(var, type, var_name,
 f.write(string)
 
 dim = "ikj"
-units = ""
+units = "kg m^-3"
 array_name = "pmc"
 var_name = "tot_hydrophylic_mass_conc"
 name = "tot_hydrophylic_mass_conc"
@@ -155,7 +156,7 @@ f.write(string)
 
 ### PM totals
 dim = "ikj"
-units = ""
+units = "kg m^-3"
 array_name = "pmc"
 var_name = "PM1_mass_conc"
 name = "PM1_mass_conc"
@@ -165,7 +166,7 @@ string = reg_format.format(var, type, var_name,
 f.write(string)
 
 dim = "ikj"
-units = ""
+units = "kg m^-3"
 array_name = "pmc"
 var_name = "PM25_mass_conc"
 name = "PM25_mass_conc"
@@ -175,7 +176,7 @@ string = reg_format.format(var, type, var_name,
 f.write(string)
 
 dim = "ikj"
-units = ""
+units = "kg m^-3"
 array_name = "pmc"
 var_name = "PM10_mass_conc"
 name = "PM10_mass_conc"
@@ -293,7 +294,7 @@ for i_assumption in range(len(assumption)):
          var_name = "ccn_%s_%s_%s" %(assumption[i_assumption],ss[i_spec],mode[i_mode])
          package.append(var_name)
          name = "%s" %var_name
-         description="%s, total mass" %(ss[i_spec])
+         description="CCN concentration %s" %(ss_label[i_spec])
          string = reg_format.format(var, type, var_name,
              dim, array_name, 1, '-', hist, name, description, units)
          f.write(string)
@@ -596,7 +597,7 @@ for i in range(3):
 species = ['SO4','NO3','Cl','NH4','MSA','ARO1','ARO2','ALK1','OLE1','API1',
      'API2','LIM1','LIM2','CO3','Na','Ca','OIN','OC','BC','H2O']
 dim = "ikjf"
-units = "total mass"
+units = "kg m^-3"
 array_name = "aero_mass"
 string = reg_format.format(var,type, "-",
        dim, array_name, '-', '-', '-','-', '-','-')
@@ -606,7 +607,7 @@ for i_spec in range(len(species)):
    var_name = "pmc_%s" %(species[i_spec])
    package.append(var_name)
    name = "%s" %var_name
-   description="%s, total mass" %(species[i_spec])
+   description="%s, total mass concentration" %(species[i_spec])
    string = reg_format.format(var, type, var_name,
        dim, array_name, 1, '-', hist, name, description, units)
    f.write(string)
@@ -629,7 +630,7 @@ for i_spec in range(len(ss)):
    var_name = "ccn_%s" %(ss[i_spec])
    package.append(var_name)
    name = "%s" %var_name
-   description="%s, total mass" %(ss[i_spec])
+   description="CCN concentration at %s" %(ss_label[i_spec])
    string = reg_format.format(var, type, var_name,
        dim, array_name, 1, '-', hist, name, description, units)
    f.write(string)
@@ -641,7 +642,7 @@ string = "%s\n" %string
 f.write(string)
 
 dim = "ikjf"
-units = "m^-3"
+units = "# m^-3"
 array_name = "pmc_ccn_conc_internal"
 string = reg_format.format(var,type, "-",
        dim, array_name, '-', '-', '-','-', '-','-')
@@ -651,7 +652,7 @@ for i_spec in range(len(ss)):
    var_name = "ccn_internal_%s" %(ss[i_spec])
    package.append(var_name)
    name = "%s" %var_name
-   description="%s, total mass" %(ss[i_spec])
+   description="CCN concentration at %s for internal mixture" %(ss_label[i_spec])
    string = reg_format.format(var, type, var_name,
        dim, array_name, 1, '-', hist, name, description, units)
    f.write(string)
@@ -663,7 +664,7 @@ string = "%s\n" %string
 f.write(string)
 
 dim = "ikjf"
-units = "m^-3"
+units = "# m^-3"
 array_name = "pmc_ccn_conc_external"
 string = reg_format.format(var,type, "-",
        dim, array_name, '-', '-', '-','-', '-','-')
@@ -673,7 +674,7 @@ for i_spec in range(len(ss)):
    var_name = "ccn_external_%s" %(ss[i_spec])
    package.append(var_name)
    name = "%s" %var_name
-   description="%s, total mass" %(ss[i_spec])
+   description="CCN concentration at %s for external mixture" %(ss[i_spec])
    string = reg_format.format(var, type, var_name,
        dim, array_name, 1, '-', hist, name, description, units)
    f.write(string)
@@ -684,38 +685,13 @@ for ii in range(1,len(package)):
 string = "%s\n" %string
 f.write(string)
 
-
-# Gas species
-#species = ['so2','o3','co','no','no2']
-#dim = "ikjf"
-#units = "ppb"
-#array_name = "gas_mixrat"
-#string = reg_format.format(var,type, "-",
-#       dim, array_name, '-', '-', '-','-', '-','-')
-#f.write(string)
-#package = []
-#for i_spec in range(len(species)):
-#   var_name = "pmc_%s" %(species[i_spec])
-#   package.append(var_name)
-#   name = "%s" %var_name
-#   description="%s, mixing ratio" %(species[i_spec])
-#   string = reg_format.format(var, type, var_name,
-#       dim, array_name, 1, '-', hist, name, description, units)
-#   f.write(string)
-#
-#string = "package partmc_process_gas chem_opt==10 - gas_mixrat:%s" % package[0]
-#for ii in range(1,len(package)):
-#  string = "%s,%s" %(string,package[ii])
-#string = "%s \n" %string
-#f.write(string)
-
 # Number concentrations for sources
 max_sources = 150
 package = []
 var = "state"
 type = "real"
 dim = "ikjf"
-units = ["#"]
+units = ["# m^-3"]
 array_name = "num_conc_source"
 string = reg_format.format(var,type, "-",
        dim, array_name, '-', '-', '-','-', '-','-')

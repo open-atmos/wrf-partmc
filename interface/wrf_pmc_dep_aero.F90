@@ -187,7 +187,7 @@ module wrf_pmc_dep_aero
 
     ! Compute deposition velocity array
     call compute_dep_vel(aero_state, aero_data, aer_res_a, ustar, &
-         env_state%temp, env_state%rrho, alpha, gamma, A, vd)
+         env_state%temp, env_state%inverse_density, alpha, gamma, A, vd)
     ! Compute the removal probability array
     call compute_dep_prob(vd, dt, env_state%height, remove_prob)
     ! Error checking

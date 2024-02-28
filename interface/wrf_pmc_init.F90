@@ -191,9 +191,9 @@ contains
         wrf_i = i
         wrf_j = j
         wrf_k = k
-        env_states(i,k,j)%ix = wrf_i
-        env_states(i,k,j)%iy = wrf_j
-        env_states(i,k,j)%iz = wrf_k
+        env_states(i,k,j)%cell_ix = wrf_i
+        env_states(i,k,j)%cell_iy = wrf_j
+        env_states(i,k,j)%cell_iz = wrf_k
         ! Set latitude/longitude
         env_states(i,k,j)%latitude = grid%xlat(wrf_i,wrf_j)
         env_states(i,k,j)%longitude = grid%xlong(wrf_i,wrf_j)
@@ -215,7 +215,7 @@ contains
         env_states(i,k,j)%z_max = (grid%phb(wrf_i,wrf_k+1,wrf_j)+ &
              grid%ph_1(wrf_i,wrf_k+1,wrf_j))/9.8
         ! FIXME: Density or inverse density
-        env_states(i,k,j)%rrho = grid%alt(wrf_i,wrf_k,wrf_j)
+        env_states(i,k,j)%inverse_density = grid%alt(wrf_i,wrf_k,wrf_j)
         ! Set time and date information
         env_states(i,k,j)%start_day = grid%julian
         env_states(i,k,j)%start_time = grid%start_hour * 3600.0d0 + &
@@ -515,9 +515,9 @@ contains
     do i = pmc_is, pmc_ie
     do k = pmc_ks, pmc_ke
     do j = pmc_js, pmc_je
-       wrf_i = env_states(i,k,j)%ix
-       wrf_j = env_states(i,k,j)%iy
-       wrf_k = env_states(i,k,j)%iz
+       wrf_i = env_states(i,k,j)%cell_ix
+       wrf_j = env_states(i,k,j)%cell_iy
+       wrf_k = env_states(i,k,j)%cell_iz
        ! Calculate the pressure
        pressure = grid%p(wrf_i,wrf_k,wrf_j)+grid%pb(wrf_i,wrf_k,wrf_j)
        ! Calculate the temperature
@@ -1682,9 +1682,9 @@ contains
         wrf_i = i
         wrf_j = j
         wrf_k = k
-        env_states(i,k,j)%ix = wrf_i
-        env_states(i,k,j)%iy = wrf_j
-        env_states(i,k,j)%iz = wrf_k
+        env_states(i,k,j)%cell_ix = wrf_i
+        env_states(i,k,j)%cell_iy = wrf_j
+        env_states(i,k,j)%cell_iz = wrf_k
         ! Set latitude/longitude
         env_states(i,k,j)%latitude = grid%xlat(wrf_i,wrf_j)
         env_states(i,k,j)%longitude = grid%xlong(wrf_i,wrf_j)
@@ -1706,7 +1706,7 @@ contains
         env_states(i,k,j)%z_max = (grid%phb(wrf_i,wrf_k+1,wrf_j)+ &
              grid%ph_1(wrf_i,wrf_k+1,wrf_j))/9.8
         ! FIXME: Density or inverse density
-        env_states(i,k,j)%rrho = grid%alt(wrf_i,wrf_k,wrf_j)
+        env_states(i,k,j)%inverse_density = grid%alt(wrf_i,wrf_k,wrf_j)
         ! Set time and date information
         env_states(i,k,j)%start_day = grid%julian
         env_states(i,k,j)%start_time = grid%start_hour * 3600.0d0 + &

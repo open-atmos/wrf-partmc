@@ -548,19 +548,19 @@ contains
        do j = max(pmc_js,1), min(pmc_je, global_ny)
        do i = max(pmc_is,1), min(pmc_ie, global_nx)
           ! Old method
-          !call output_column_to_file(prefix, aero_data, &
-          !     aero_states(i,pmc_ks:pmc_ke,j), gas_data, &
-          !     gas_states(i,pmc_ks:pmc_ke,j), &
-          !     env_states(i,pmc_ks:pmc_ke,j), global_nz, &
-          !     output_index,time,del_t,i_repeat, &
-          !     record_removals, record_optical, uuid)
-          ! New method
-          call output_column_to_file_new(prefix, aero_data, &
+          call output_column_to_file(prefix, aero_data, &
                aero_states(i,pmc_ks:pmc_ke,j), gas_data, &
                gas_states(i,pmc_ks:pmc_ke,j), &
                env_states(i,pmc_ks:pmc_ke,j), global_nz, &
                output_index,time,del_t,i_repeat, &
                record_removals, record_optical, uuid)
+          ! New method
+!          call output_column_to_file_new(prefix, aero_data, &
+!               aero_states(i,pmc_ks:pmc_ke,j), gas_data, &
+!               gas_states(i,pmc_ks:pmc_ke,j), &
+!               env_states(i,pmc_ks:pmc_ke,j), global_nz, &
+!               output_index,time,del_t,i_repeat, &
+!               record_removals, record_optical, uuid)
        end do
        end do
     end if
@@ -630,7 +630,7 @@ contains
        env_states(i,k,j)%z_min = grid%z_at_w(i,k,j)
        env_states(i,k,j)%z_max = grid%z_at_w(i,k+1,j)
        ! Inverse density
-       env_states(i,k,j)%rrho = grid%alt(i,k,j)
+       env_states(i,k,j)%inverse_density = grid%alt(i,k,j)
        env_states(i,k,j)%cell_volume = get_grid_cell_volume(grid, i, k, j)
     end do
     end do
@@ -712,7 +712,7 @@ contains
     real(kind=dp), dimension(:), allocatable :: dry_diameters, num_concs, &
          masses, bc_masses, num_dist, mass_dist, num_concs_average, &
          num_concs_deaverage, diameters, dry_diameters_average, &
-         dry_diameters_deaverage
+         dry_diameters_deaverage, diameters_average
     real(kind=dp), dimension(:), allocatable :: so4_masses, nh4_masses, &
        oc_masses, no3_masses, soa_masses, ss_masses, oin_masses, h2o_masses
     real(kind=dp), dimension(:), allocatable ::  crit_rel_humids, dry_mass_conc
@@ -961,56 +961,56 @@ contains
        grid%d_alpha_opt(i,k,j) = d_alpha
        grid%d_gamma_opt(i,k,j) = d_gamma
 
-       call aero_state_mixing_state_metrics_by_size(aero_states(i,k,j), &
-            aero_data, grid_model, d_alpha_array, d_gamma_array, &
-            chi_array, exclude=["H2O"])
+!       call aero_state_mixing_state_metrics_binned(aero_states(i,k,j), &
+!            aero_data, grid_model, d_alpha_array, d_gamma_array, &
+!            chi_array, exclude=["H2O"])
 
        i_bin = 1
-       grid%chi_species_a1(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_species_a1(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_species_a1(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_species_a1(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_species_a1(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_species_a1(i,k,j) = d_gamma_array(i_bin)
        i_bin = 2
-       grid%chi_species_a2(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_species_a2(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_species_a2(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_species_a2(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_species_a2(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_species_a2(i,k,j) = d_gamma_array(i_bin)
        i_bin = 3
-       grid%chi_species_a3(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_species_a3(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_species_a3(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_species_a3(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_species_a3(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_species_a3(i,k,j) = d_gamma_array(i_bin)
 
-       call aero_state_mixing_state_metrics_by_size(aero_states(i,k,j), &
-            aero_data, grid_model, d_alpha_array, d_gamma_array, &
-            chi_array, exclude=["H2O"], group=["BC ", "OC "])
+!       call aero_state_mixing_state_metrics_binned(aero_states(i,k,j), &
+!            aero_data, grid_model, d_alpha_array, d_gamma_array, &
+!            chi_array, exclude=["H2O"], group=["BC ", "OC "])
 
        i_bin = 1
-       grid%chi_ccn_a1(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_ccn_a1(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_ccn_a1(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_ccn_a1(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_ccn_a1(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_ccn_a1(i,k,j) = d_gamma_array(i_bin)
        i_bin = 2
-       grid%chi_ccn_a2(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_ccn_a2(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_ccn_a2(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_ccn_a2(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_ccn_a2(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_ccn_a2(i,k,j) = d_gamma_array(i_bin)
        i_bin = 3
-       grid%chi_ccn_a3(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_ccn_a3(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_ccn_a3(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_ccn_a3(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_ccn_a3(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_ccn_a3(i,k,j) = d_gamma_array(i_bin)
 
-       call aero_state_mixing_state_metrics_by_size(aero_states(i,k,j), &
-            aero_data, grid_model, d_alpha_array, d_gamma_array, &
-            chi_array, exclude=["H2O"], group=["BC "])
+!       call aero_state_mixing_state_metrics_binned(aero_states(i,k,j), &
+!            aero_data, grid_model, d_alpha_array, d_gamma_array, &
+!            chi_array, exclude=["H2O"], group=["BC "])
 
        i_bin = 1
-       grid%chi_opt_a1(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_opt_a1(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_opt_a1(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_opt_a1(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_opt_a1(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_opt_a1(i,k,j) = d_gamma_array(i_bin)
        i_bin = 2
-       grid%chi_opt_a2(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_opt_a2(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_opt_a2(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_opt_a2(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_opt_a2(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_opt_a2(i,k,j) = d_gamma_array(i_bin)
        i_bin = 3
-       grid%chi_opt_a3(i,k,j) = chi_array(i_bin)
-       grid%d_alpha_opt_a3(i,k,j) = d_alpha_array(i_bin)
-       grid%d_gamma_opt_a3(i,k,j) = d_gamma_array(i_bin)
+!       grid%chi_opt_a3(i,k,j) = chi_array(i_bin)
+!       grid%d_alpha_opt_a3(i,k,j) = d_alpha_array(i_bin)
+!       grid%d_gamma_opt_a3(i,k,j) = d_gamma_array(i_bin)
 
        ! Submicron mixing state
        aero_state_submicron = aero_states(i,k,j)
@@ -1136,7 +1136,7 @@ contains
        ! total number of computational particles
        grid%n_parts(i,k,j) = aero_state_n_part(aero_states(i,k,j))
 
-       n_components = aero_state_num_components(aero_states(i,k,j))
+       n_components = aero_state_n_components(aero_states(i,k,j))
        coagulated = n_components > 1
        grid%tot_coagulation_num_conc(i,k,j) = sum(pack(num_concs, coagulated))
 
@@ -1179,14 +1179,15 @@ contains
 
        ! Optical properties
        if (grid%do_optical) then
+          diameters = aero_state_dry_diameters(aero_states(i,k,j), aero_data)
           grid%scat_aer_550(i,k,j) = aero_state_scattering(aero_states(i,k,j), &
                aero_data, i_550nm)
           grid%ext_aer_550(i,k,j) = aero_state_absorption(aero_states(i,k,j), &
                aero_data, i_550nm) + grid%scat_aer_550(i,k,j)
-          b_scat = aero_state_get_bin_scat(aero_states(i,k,j), aero_data, &
-               grid_model, i_550nm)
-          b_abs = aero_state_get_bin_abs(aero_states(i,k,j), aero_data, &
-               grid_model, i_550nm)
+          b_scat = aero_state_scattering_binned(aero_states(i,k,j), aero_data, &
+               grid_model, diameters, i_550nm)
+          b_abs = aero_state_absorption_binned(aero_states(i,k,j), aero_data, &
+               grid_model, diameters, i_550nm)
 
           grid%scat_aer_550_pr_a1(i,k,j) = b_scat(1)
           grid%scat_aer_550_pr_a2(i,k,j) = b_scat(2)
@@ -1197,19 +1198,24 @@ contains
           grid%ext_aer_550_pr_a3(i,k,j) = b_scat(3) + b_abs(3)
 
           ! Internal mixed optical properties
-          call condense_equilib_particles(env_states(i,k,j), aero_data, aero_state_average)
+          call condense_equilib_particles(env_states(i,k,j), aero_data, &
+               aero_state_average)
+          diameters_average = aero_state_dry_diameters(aero_state_average, &
+               aero_data)
+          call mosaic_aero_optical_single_wavelength(env_states(i,k,j), &
+               aero_data, aero_state_average, gas_data, gas_states(i,k,j), &
+               i_550nm)
 
-!          call mosaic_compute_single_aero_optical(env_states(i,k,j), aero_data, &
-!               aero_state_average, gas_data, gas_states(i,k,j))
-          grid%scat_aer_550_internal(i,k,j) = aero_state_scattering(aero_state_average, &
-               aero_data, i_550nm)
-          grid%ext_aer_550_internal(i,k,j) = aero_state_absorption(aero_state_average, &
-               aero_data, i_550nm) + grid%scat_aer_550_internal(i,k,j)
+          grid%scat_aer_550_internal(i,k,j) = aero_state_scattering( &
+               aero_state_average, aero_data, i_550nm)
+          grid%ext_aer_550_internal(i,k,j) = aero_state_absorption( &
+               aero_state_average, aero_data, i_550nm) &
+               + grid%scat_aer_550_internal(i,k,j)
 
-          b_scat = aero_state_get_bin_scat(aero_state_average, aero_data, &
-               grid_model, i_550nm)
-          b_abs = aero_state_get_bin_abs(aero_state_average, aero_data, &
-               grid_model, i_550nm)
+          b_scat = aero_state_scattering_binned(aero_state_average, aero_data, &
+               grid_model, diameters, i_550nm)
+          b_abs = aero_state_absorption_binned(aero_state_average, aero_data, &
+               grid_model, diameters, i_550nm)
 
           grid%scat_aer_550_internal_a1(i,k,j) = b_scat(1)
           grid%scat_aer_550_internal_a2(i,k,j) = b_scat(2)
@@ -1220,28 +1226,29 @@ contains
           grid%ext_aer_550_internal_a3(i,k,j) = b_scat(3) + b_abs(3)
 
           ! External mixed optical properties
-          call condense_equilib_particles(env_states(i,k,j), aero_data, &
-               aero_state_deaverage)
+!          call condense_equilib_particles(env_states(i,k,j), aero_data, &
+!               aero_state_deaverage)
 
-!          call mosaic_compute_single_aero_optical(env_states(i,k,j), aero_data, &
-!               aero_state_deaverage, gas_data, gas_states(i,k,j))
-          grid%scat_aer_550_external(i,k,j) = aero_state_scattering( &
-               aero_state_deaverage, aero_data, i_550nm)
-          grid%ext_aer_550_external(i,k,j) = aero_state_absorption( &
-               aero_state_deaverage, aero_data, i_550nm) &
-               + grid%scat_aer_550_external(i,k,j)
-          b_scat = aero_state_get_bin_scat(aero_state_deaverage, &
-               aero_data, grid_model, i_550nm)
-          b_abs = aero_state_get_bin_abs(aero_state_deaverage, &
-               aero_data, grid_model, i_550nm)
+!          call mosaic_aero_optical_single_wavelength(env_states(i,k,j), &
+!               aero_data, aero_state_deaverage, gas_data, gas_states(i,k,j), &
+!               i_550nm)
+!          grid%scat_aer_550_external(i,k,j) = aero_state_scattering( &
+!               aero_state_deaverage, aero_data, i_550nm)
+!          grid%ext_aer_550_external(i,k,j) = aero_state_absorption( &
+!               aero_state_deaverage, aero_data, i_550nm) &
+!               + grid%scat_aer_550_external(i,k,j)
+!          b_scat = aero_state_get_bin_scat(aero_state_deaverage, &
+!               aero_data, grid_model, i_550nm)
+!          b_abs = aero_state_get_bin_abs(aero_state_deaverage, &
+!               aero_data, grid_model, i_550nm)
 
-          grid%scat_aer_550_external_a1(i,k,j) = b_scat(1)
-          grid%scat_aer_550_external_a2(i,k,j) = b_scat(2)
-          grid%scat_aer_550_external_a3(i,k,j) = b_scat(3)
+!          grid%scat_aer_550_external_a1(i,k,j) = b_scat(1)
+!          grid%scat_aer_550_external_a2(i,k,j) = b_scat(2)
+!          grid%scat_aer_550_external_a3(i,k,j) = b_scat(3)
 
-          grid%ext_aer_550_external_a1(i,k,j) = b_scat(1) + b_abs(1)
-          grid%ext_aer_550_external_a2(i,k,j) = b_scat(2) + b_abs(2)
-          grid%ext_aer_550_external_a3(i,k,j) = b_scat(3) + b_abs(3)
+!          grid%ext_aer_550_external_a1(i,k,j) = b_scat(1) + b_abs(1)
+!          grid%ext_aer_550_external_a2(i,k,j) = b_scat(2) + b_abs(2)
+!          grid%ext_aer_550_external_a3(i,k,j) = b_scat(3) + b_abs(3)
        end if
     end if ! End loop for aerosol species
     end if ! End loop for existence of paricles
@@ -1266,7 +1273,7 @@ contains
        uuid =  grid%uuid
        ! FIXME: This isn't flexible. Needs to be the output frequency in minutes
        output_index = grid%xtime / 10
-       call output_column_to_file_new(prefix, aero_data, &
+       call output_column_to_file(prefix, aero_data, &
                aero_states(i,1,j), gas_data, gas_states(i,1,j), &
                env_states(i,1,j), 1, output_index, time, del_t, i_repeat, &
                record_removals, record_optical, uuid)
@@ -1361,7 +1368,7 @@ contains
    
 #ifdef PMC_USE_WRF
     write(filename,'(a,a,i3.3,a,i3.3,a,i8.8,a)') trim(prefix), &
-         '_', env_state(1)%ix, '_', env_state(1)%iy, '_', index, '.nc'
+         '_', env_state(1)%cell_ix, '_', env_state(1)%cell_iy, '_', index, '.nc'
     call pmc_nc_open_write(filename, ncid)
     call pmc_nc_write_info(ncid, uuid, &
          "WRF-PartMC version " // trim(PARTMC_VERSION), write_rank, &
@@ -1378,7 +1385,7 @@ contains
        part_start_index(k) = total_particles + 1
        total_particles = total_particles + aero_state_n_part(aero_state(k))
        total_components = total_components + &
-            aero_state_n_components(aero_state(k))
+            aero_state_total_n_components(aero_state(k))
     end do
 
     allocate(gas_mixing_ratios(nz,gas_data_n_spec(gas_data)))  
@@ -1494,7 +1501,7 @@ contains
     end if
 
     if (record_optical) then
-       call aero_state_netcdf_dim_optical_wavelengths(aero_state(1), ncid, &
+       call aero_data_netcdf_dim_optical_wavelengths(aero_data, ncid, &
             dimid_optical_wavelengths)
     end if
 
@@ -2063,9 +2070,9 @@ contains
        tau(i_lambda) = (B_scat + B_abs) * env_state%height
     end do
 
-    i = env_state%ix
-    j = env_state%iy
-    k = env_state%iz
+    i = env_state%cell_ix
+    j = env_state%cell_iy
+    k = env_state%cell_iz
 
     idx = 1
     grid%tauaer1(i,k,j) = tau(idx)

@@ -1,6 +1,6 @@
 [submodule "partmc"]
 	path = partmc
-	url = https://github.com/jcurtis2/partmc.git
+	url = https://github.com/compdyn/partmc.git
 [submodule "mosaic"]
 	path = mosaic
 	url = git@github.com:jcurtis2/mosaic.git

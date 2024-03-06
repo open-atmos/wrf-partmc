@@ -992,7 +992,7 @@ pmc_modules:
 	@ echo '--------------------------------------'
 	if [ $(MOSAIC) -eq 1 ] ; then ( cd ../mosaic ; cp ../WRFV3/Makefile.local.mosaic Makefile.local ; make ) ; fi
 	@ echo 'Building PartMC modules'
-	( cd ../partmc/src ; $(MAKE) $(J) pmc )
+	( cd ../partmc/src ; $(MAKE) $(J) -f Makefile.wrf_partmc pmc )
 
 partmc_interface:
 	@ echo '--------------------------------------'

@@ -137,7 +137,7 @@ contains
 
        do j = j_start,j_end 
        do i = i_start,i_end
-          call compute_vertical_diffusion_probs(grid, &
+          call compute_vertical_probs(grid, &
                env_states(i,pmc_ks:pmc_ke,j), global_nz, &
                aero_weight_array_n_class(aero_states(i,pmc_ks,j)%awa), &
                config_flags%vertmix_onoff)
@@ -220,9 +220,9 @@ contains
 
     env_state%prob_advection = 0.0d0
 
-    i = env_state%ix
-    j = env_state%iy
-    k = env_state%iz
+    i = env_state%cell_ix
+    j = env_state%cell_iy
+    k = env_state%cell_iz
     i_group = 1
     rho_mass = 1.0d0 / real(grid%alt(i,k,j),kind=dp)
     do i_class = 1,aero_weight_array_n_class(aero_state%awa)
@@ -301,9 +301,9 @@ contains
 
     env_state%prob_advection = 0.0d0
 
-    i = env_state%ix
-    j = env_state%iy
-    k = env_state%iz
+    i = env_state%cell_ix
+    j = env_state%cell_iy
+    k = env_state%cell_iz
 
     dx = grid%dx
     dy = grid%dy
@@ -374,9 +374,9 @@ contains
     dx = grid%dx
     dy = grid%dy
     dt = grid%dt 
-    i = env_state%ix
-    j = env_state%iy
-    k = env_state%iz
+    i = env_state%cell_ix
+    j = env_state%cell_iy
+    k = env_state%cell_iz
 
     rho_mass = (1.0d0/grid%alt(i,k,j))
 
@@ -411,7 +411,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> Compute vertical probabilities.
-  subroutine compute_vertical_diffusion_probs(grid, env_states, nz, n_class, &
+  subroutine compute_vertical_probs(grid, env_states, nz, n_class, &
        do_vertmix)
 
     !> WRF grid.
@@ -440,11 +440,11 @@ contains
     real(kind=dp) :: tmp
     integer :: pmc_i, pmc_j, kk
 
-    call stable_timestep(grid, env_states(1)%ix, env_states(1)%iy, &
+    call stable_timestep(grid, env_states(1)%cell_ix, env_states(1)%cell_iy, &
          small_dt, num_steps)
   
-    pmc_i = env_states(1)%ix
-    pmc_j = env_states(1)%iy
+    pmc_i = env_states(1)%cell_ix
+    pmc_j = env_states(1)%cell_iy
 
     ! Geometric height, diffusion coef. and density values at mass point
     do k = 1,nz
@@ -559,7 +559,7 @@ contains
        end do
     end do
 
-  end subroutine compute_vertical_diffusion_probs
+  end subroutine compute_vertical_probs
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -661,8 +661,8 @@ contains
 
     integer :: i, j
 
-    i = env_state%ix
-    j = env_state%iy
+    i = env_state%cell_ix
+    j = env_state%cell_iy
 
     if (i == 1 .or. i == global_nx .or. j == 1 .or. j ==global_ny) then
        env_state%prob_advection = 0.0d0
@@ -705,7 +705,7 @@ contains
     valid_probs = valid_probs .and. &
          all(env_state%prob_vert_diffusion(:,i_class) >= 0.0d0)
     if (.not. valid_probs) then
-       print*, env_state%iz, i_class
+       print*, env_state%cell_iz, i_class
        print*, env_state%prob_advection(:,:,:,i_class) 
        print*, env_state%prob_diffusion(:,:,:,i_class) 
        print*, env_state%prob_vert_diffusion(:,i_class)
@@ -716,7 +716,7 @@ contains
     prob_sum = prob_sum + sum(env_state%prob_diffusion(:,:,:,i_class))
 
     do k = 1,size(env_state%prob_vert_diffusion,1)
-       if (k .ne. env_state%iz) then
+       if (k .ne. env_state%cell_iz) then
           prob_sum = prob_sum + env_state%prob_vert_diffusion(k,i_class)
        end if
     end do
@@ -738,7 +738,7 @@ contains
     valid_probs = valid_probs .and. &
          all(env_state%prob_vert_diffusion(:,i_class) >= 0.0d0)
     if (.not. valid_probs) then
-       print*, env_state%iz, i_class
+       print*, env_state%cell_iz, i_class
        print*, env_state%prob_advection(:,:,:,i_class)
        print*, env_state%prob_diffusion(:,:,:,i_class)
        print*, env_state%prob_vert_diffusion(:,i_class)
@@ -751,7 +751,7 @@ contains
     valid_probs = valid_probs .and. &
          all(env_state%prob_vert_diffusion(:,i_class) <= 1.0d0)
     if (.not. valid_probs) then
-       print*, env_state%iz, i_class
+       print*, env_state%cell_iz, i_class
        print*, env_state%prob_advection(:,:,:,i_class)
        print*, env_state%prob_diffusion(:,:,:,i_class)
        print*, env_state%prob_vert_diffusion(:,i_class)
@@ -763,7 +763,7 @@ contains
     prob_sum = prob_sum + sum(env_state%prob_diffusion(:,:,:,i_class))
 
     do k = 1,size(env_state%prob_vert_diffusion,1)
-       if (k .ne. env_state%iz) then
+       if (k .ne. env_state%cell_iz) then
           prob_sum = prob_sum + env_state%prob_vert_diffusion(k,i_class)
        end if
     end do

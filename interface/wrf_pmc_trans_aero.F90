@@ -185,7 +185,7 @@ contains
           send_array_cell_volume(i_pos,k_pos,j_pos) = &
                env_states(i_inc,k_inc,j_inc)%cell_volume
           send_array_rrho(i_pos,k_pos,j_pos) = &
-               env_states(i_inc,k_inc,j_inc)%rrho
+               env_states(i_inc,k_inc,j_inc)%inverse_density
        end do
        end do
        end do
@@ -258,7 +258,7 @@ contains
              k_pos = k_inc - k_recv_s + 1
              env_states_temp(i_inc,k_inc,j_inc)%cell_volume = recv_cell_volume( &
                   i_pos,k_pos,j_pos)
-             env_states_temp(i_inc,k_inc,j_inc)%rrho = recv_rrho(i_pos,k_pos,j_pos)
+             env_states_temp(i_inc,k_inc,j_inc)%inverse_density = recv_rrho(i_pos,k_pos,j_pos)
           end do
           end do
           end do
@@ -699,8 +699,8 @@ contains
                       env_states(i,k,j)%prob_diffusion(1,0,0,i_class), 1.0d0)
                  call aero_state_sample_particles_by_class(aero_states(i,k,j), &
                       delta_aero_states(i+1,k,j), aero_data, prob, &
-                      AERO_INFO_NONE, env_states(i,k,j)%rrho, &
-                      env_states(i+1,k,j)%rrho, source_vol, dest_vol, i_class)
+                      AERO_INFO_NONE, env_states(i,k,j)%inverse_density, &
+                      env_states(i+1,k,j)%inverse_density, source_vol, dest_vol, i_class)
              end do
           end do
           end do
@@ -716,8 +716,8 @@ contains
                      env_states(i,k,j)%prob_diffusion(-1,0,0,i_class), 1.0d0)
                 call aero_state_sample_particles_by_class(aero_states(i,k,j), &
                      delta_aero_states(i-1,k,j), aero_data, prob, &
-                     AERO_INFO_NONE, env_states(i,k,j)%rrho, &
-                     env_states(i-1,k,j)%rrho, &
+                     AERO_INFO_NONE, env_states(i,k,j)%inverse_density, &
+                     env_states(i-1,k,j)%inverse_density, &
                      source_vol, dest_vol, i_class)
              end do
              end do
@@ -737,7 +737,8 @@ contains
                      env_states(i,k,j)%prob_diffusion(0,0,1,i_class), 1.0d0)
                 call aero_state_sample_particles_by_class(aero_states(i,k,j), &
                      delta_aero_states(i,k,j+1), aero_data, prob, &
-                     AERO_INFO_NONE, env_states(i,k,j)%rrho, env_states(i,k,j+1)%rrho, &
+                     AERO_INFO_NONE, env_states(i,k,j)%inverse_density, &
+                     env_states(i,k,j+1)%inverse_density, &
                      source_vol, dest_vol, i_class)
                 end do
              end do
@@ -755,7 +756,8 @@ contains
                      env_states(i,k,j)%prob_diffusion(0,0,-1,i_class), 1.0d0)
                 call aero_state_sample_particles_by_class(aero_states(i,k,j), &
                      delta_aero_states(i,k,j-1), aero_data, prob, &
-                     AERO_INFO_NONE, env_states(i,k,j)%rrho, env_states(i,k,j-1)%rrho, &
+                     AERO_INFO_NONE, env_states(i,k,j)%inverse_density, &
+                     env_states(i,k,j-1)%inverse_density, &
                      source_vol, dest_vol, i_class)
              end do
              end do
@@ -837,7 +839,7 @@ contains
                    if (grid%u_2(i,k,j) * grid%u_1(i,k,j) < 0.0d0) throw_away = .true.
                    if (change_boundary_conditions) throw_away = .true. 
                    call aero_state_resample(aero_states(i,k,j), aero_data, &
-                        background, (1.0d0 / env_states(i,k,j)%rrho), 1.0d0, &
+                        background, (1.0d0 / env_states(i,k,j)%inverse_density), 1.0d0, &
                         0.0d0, .true., .true., throw_away, n_part_add)
                 end if
              end do
@@ -872,7 +874,7 @@ contains
                    if (grid%u_2(i+1,k,j) * grid%u_1(i+1,k,j) < 0.0d0) throw_away = .true.
                    if (change_boundary_conditions) throw_away = .true.
                    call aero_state_resample(aero_states(i,k,j), aero_data, &
-                        background, (1.0d0 / env_states(i,k,j)%rrho), 1.0d0, &
+                        background, (1.0d0 / env_states(i,k,j)%inverse_density), 1.0d0, &
                         0.0d0, .true., .true., throw_away, n_part_add) 
                 end if 
              end do
@@ -909,7 +911,7 @@ contains
                    if (grid%v_2(i,k,j) * grid%v_1(i,k,j) < 0.0d0) throw_away = .true.
                    if (change_boundary_conditions) throw_away = .true.
                    call aero_state_resample(aero_states(i,k,j), aero_data, &
-                        background, (1.0d0 / env_states(i,k,j)%rrho), 1.0d0, &
+                        background, (1.0d0 / env_states(i,k,j)%inverse_density), 1.0d0, &
                         0.0d0, .true., .true., throw_away, n_part_add) 
                 end if
              end do
@@ -944,7 +946,7 @@ contains
                    if (grid%v_2(i,k,j+1) * grid%v_1(i,k,j+1) < 0.0d0) throw_away = .true.
                    if (change_boundary_conditions) throw_away = .true.
                    call aero_state_resample(aero_states(i,k,j), aero_data, &
-                        background, (1.0d0 / env_states(i,k,j)%rrho), 1.0d0, &
+                        background, (1.0d0 / env_states(i,k,j)%inverse_density), 1.0d0, &
                         0.0d0, .true., .true., throw_away, n_part_add)
                 end if
              end do
@@ -1469,11 +1471,10 @@ contains
     integer :: i_index, j_index, k_index
     integer :: i,j,k, i_part
     real(kind=dp) :: flux, prob, dest_vol, source_vol
-    real(kind=dp), parameter :: min_prob = 1.0d-4
 
-    i_index = env_state%ix
-    j_index = env_state%iy
-    k_index = env_state%iz
+    i_index = env_state%cell_ix
+    j_index = env_state%cell_iy
+    k_index = env_state%cell_iz
 
     source_vol = env_states(i_index,k_index,j_index)%cell_volume
     if (ideal) then
@@ -1507,15 +1508,13 @@ contains
        do k = pmc_ks,pmc_ke
           if (k .ne. k_index) then
              prob = env_state%prob_vert_diffusion(k,i_class)
-             if (prob > 1.0d-6) then
-                dest_vol = env_states(i_index,k,j_index)%cell_volume
-                flux = prob * num_conc_old
-                num_conc_new(i_index,k,j_index) = &
-                     num_conc_new(i_index,k,j_index) + flux * &
-                     (dest_vol / source_vol)
-                num_conc_new(i_index,k_index,j_index) = &
-                     num_conc_new(i_index,k_index,j_index) - flux
-             end if
+             dest_vol = env_states(i_index,k,j_index)%cell_volume
+             flux = prob * num_conc_old
+             num_conc_new(i_index,k,j_index) = &
+                  num_conc_new(i_index,k,j_index) + flux * &
+                  (dest_vol / source_vol)
+             num_conc_new(i_index,k_index,j_index) = &
+                  num_conc_new(i_index,k_index,j_index) - flux
           end if
        end do
     else ! Real case
@@ -1610,15 +1609,13 @@ contains
           do k = pmc_ks,pmc_ke
              if (k .ne. k_index) then
                 prob = env_state%prob_vert_diffusion(k,i_class)
-!                if (prob > 1.0d-6) then
-                   dest_vol = env_states(i_index,k,j_index)%cell_volume
-                   flux = prob * num_conc_old
-                   num_conc_new(i_index,k,j_index) = &
-                        num_conc_new(i_index,k,j_index) + flux  * &
-                        (dest_vol / source_vol)
-                   num_conc_new(i_index,k_index,j_index) = &
-                        num_conc_new(i_index,k_index,j_index) - flux
-!                end if
+                dest_vol = env_states(i_index,k,j_index)%cell_volume
+                flux = prob * num_conc_old
+                num_conc_new(i_index,k,j_index) = &
+                     num_conc_new(i_index,k,j_index) + flux  * &
+                     (dest_vol / source_vol)
+                num_conc_new(i_index,k_index,j_index) = &
+                     num_conc_new(i_index,k_index,j_index) - flux
              end if
           end do
        end if
@@ -2401,7 +2398,6 @@ contains
     real(kind=dp) :: adjusted_prob
     real(kind=dp) :: prob
     real(kind=dp), parameter :: remainder_eps = 1.0d-8
-    real(kind=dp), parameter :: min_prob = 0.0d0
     type(env_state_t) :: env_state
     real(kind=dp) :: dest_vol, source_vol
     integer :: i, j, k, i_class, prob_count
@@ -2466,7 +2462,7 @@ contains
        do i = 1,prob_count
           prob = probs(i)
           adjusted_prob = min(prob / remainder_prob, 1.0d0)
-          if (prob > min_prob .and. remainder_prob >= remainder_eps) then
+          if (remainder_prob >= remainder_eps) then
              dest_i = source_i + i_offset(perm(i))
              dest_j = source_j + j_offset(perm(i))
              dest_k = source_k + k_offset(perm(i))
@@ -2474,9 +2470,10 @@ contains
              dest_vol = env_states(dest_i,dest_k,dest_j)%cell_volume
              call aero_state_sample_particles_by_class(aero_state, &
                   delta_aero_states(dest_i,dest_k,dest_j), aero_data, &
-                  adjusted_prob, 0, env_states(source_i,source_k,source_j)%rrho, &
-                  env_states(dest_i,dest_k,dest_j)%rrho, source_vol, dest_vol, &
-                  i_class)
+                  adjusted_prob, 0, &
+                  env_states(source_i,source_k,source_j)%inverse_density, &
+                  env_states(dest_i,dest_k,dest_j)%inverse_density, &
+                  source_vol, dest_vol, i_class)
              remainder_prob = remainder_prob - prob
           end if   
        end do

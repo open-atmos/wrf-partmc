@@ -210,8 +210,7 @@ CONTAINS
     mminlu2 = ' '
     mminlu2(1:4) = 'USGS'
     CALL nl_set_mminlu(1, mminlu2)
-!    CALL nl_set_mminlu(1, '    ')
-    CALL nl_set_iswater(1,0)
+    CALL nl_set_iswater(1,16)
     CALL nl_set_cen_lat(1,40.)
     CALL nl_set_cen_lon(1,-105.)
     CALL nl_set_truelat1(1,0.)
@@ -241,6 +240,11 @@ CONTAINS
 !  for LES, include Coriolis force
          grid%f(i,j)        = 1.e-4 
 
+!  for LES, initialize surface type and skin temperature
+         grid%xland(i,j)     = 1.
+         grid%landmask(i,j)  = 1.
+         grid%lu_index(i,j)  = 7
+         grid%tsk(i,j) = 280.0
       END DO
    END DO
 

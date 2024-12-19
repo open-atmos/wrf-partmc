@@ -32,9 +32,10 @@ MODULES =  \
 all: make_boundary_conditions make_initial_conditions
 
 make_boundary_conditions: $(MODULES)
-	$(FC) make_bcs.F90 $(MODULES) $(INC) $(LIBS) $(FFLAGS) -o create_bcs
+	$(FC) -c ic_bc_helper.F90 -I../partmc/src
+	$(FC) make_bcs.F90 ic_bc_helper.o $(MODULES) $(INC) $(LIBS) $(FFLAGS) -o create_bcs
 
 make_initial_conditions: $(MODULES)
-	$(FC) make_ics.F90 $(MODULES) $(INC) $(LIBS) $(FFLAGS) -o create_ics
+	$(FC) make_ics.F90 ic_bc_helper.o $(MODULES) $(INC) $(LIBS) $(FFLAGS) -o create_ics
 clean:
 	rm -rf create_bcs create_ics

@@ -8,6 +8,7 @@ program make_ics
   use pmc_spec_file
   use pmc_mpi
   use mpi
+  use ic_bc_helper
 
   implicit none
  
@@ -16,8 +17,7 @@ program make_ics
   !> NetCDF file ID, in data mode.
   integer :: ncid_ic
 
-  character(len=100), allocatable, dimension(:) :: aero_spec_name
-
+  character(len=100), allocatable, dimension(:) :: aero_mode_name
   real(kind=dp), allocatable, dimension(:,:,:,:,:) :: aero_values
   real(kind=dp), allocatable, dimension(:,:,:) :: density
   character(len=100) :: name
@@ -25,25 +25,20 @@ program make_ics
   integer :: status
   integer :: dim
   integer :: n_modes
-  integer :: nx, ny, nz, nt
+  integer :: nx, ny, nz
   integer :: i,j,k
   integer :: i_mode
-  integer :: n_aero_species
+  integer :: n_spec
   type(aero_data_t) :: aero_data
   integer :: is, ie, js, je
-  real(kind=dp), allocatable, dimension(:) :: mode_diams, mode_std, &
-       mode_num_concs
+  real(kind=dp), allocatable, dimension(:) :: mode_diams, mode_std
   integer, allocatable, dimension(:) :: mode_source
   real(kind=dp), allocatable, dimension(:,:) :: mode_vol_fracs
   character(len=300) :: output_file_prefix, output_file_path, file_prefix
-  character(len=100) ::  suffix
   type(spec_file_t) :: sub_file
   character(len=300) :: file_path, filename, command
 
-  ! 
   integer :: rem, n_proc, is_local, ie_local
-
-  logical, parameter :: mam3 = .true.
 
   call pmc_mpi_init()
 
@@ -76,8 +71,6 @@ program make_ics
   call spec_file_read_aero_data(sub_file, aero_data)
   call spec_file_close(sub_file)
 
-  suffix = '.nc'
-
   ! What is our grid - we should get this from the netcdf file
   write(filename_ic,'(A,A)') trim(file_path), "wrfinput_d01"
   call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
@@ -94,77 +87,19 @@ program make_ics
   je = je - 1
   ny = je - js + 1 
   nz = nz - 1 
-  nt = 4 
-
-  if (mam3) then
-     n_modes = 3
-  else
-     n_modes = 4
-  end if
-  n_aero_species = aero_data_n_spec(aero_data)
-
-  allocate(mode_diams(n_modes))
-  allocate(mode_std(n_modes))
-  allocate(mode_num_concs(n_modes))
-  allocate(mode_vol_fracs(n_modes,n_aero_species))
-  allocate(mode_source(n_modes))
-  allocate(aero_spec_name(n_modes))
-
-  ! Zero everything out
-  mode_num_concs = 0.0d0
-  mode_vol_fracs = 0.0d0
 
   ! Set values
-  if (mam3) then
-     aero_spec_name(1) = "aitken"
-     mode_diams(1) = 0.0260d-6
-     mode_std(1) =  1.6d0
-     mode_source(1) = 1 
+  call get_mode_parameters(aero_mode_name, mode_diams, mode_std, &
+       mode_vol_fracs, mode_source, aero_data)
+ 
+  n_modes = size(mode_diams)
+  n_spec = aero_data_n_spec(aero_data)
 
-     aero_spec_name(2) = "accumulation"
-     mode_diams(2) =  0.11d-6
-     mode_std(2) =  1.8d0
-     mode_source(2) = 2 
-
-     aero_spec_name(3) = "coarse"
-     mode_diams(3) =  2.0d-6
-     mode_std(3) =  1.8d0
-     mode_source(3) = 3 
-  else
-     aero_spec_name(1) = "so4"
-     mode_diams(1) =  69.5 * 2.0d0 
-     mode_std(1) =  2.03d0
-     mode_vol_fracs(1,1) = 1.0
-     mode_source(1) = 1
-
-     aero_spec_name(2) = 'no3'
-     mode_diams(2) = 69.5 * 2.0d0
-     mode_std(2) = 2.03d0
-     mode_vol_fracs(2,2) = 62.0d0 / 80.0d0 ! no3
-     mode_vol_fracs(2,4) = 18.0d0 / 80.0d0 
-     mode_source(2) = 2
-
-     aero_spec_name(3) = 'bc'
-     mode_diams(3) = 11.8 * 2.0d0 
-     mode_std(3) = 2.0d0
-     mode_vol_fracs(3,19) = 1.0
-     mode_source(3) = 3
-
-     aero_spec_name(4) = 'oc'
-     mode_diams(4) = 21.2 * 2.0d0
-     mode_std(4) = 2.2d0
-     mode_vol_fracs(4,18) = 1.0
-     mode_source(4) = 4
-
-    ! Convert from nanometers to meters
-    mode_diams = mode_diams / 1e9
-  end if
-
-  allocate(aero_values(n_modes,n_aero_species,is:ie,js:je,nz))
+  allocate(aero_values(n_modes,n_spec,is:ie,js:je,nz))
   allocate(density(is:ie,js:je,nz))
 
-  call load_data_aero(aero_values, n_modes, n_aero_species, nx, &
-       ny, nz, aero_spec_name, density, ncid_ic, aero_data)
+  call load_data_aero(aero_values, n_modes, n_spec, nx, &
+       ny, nz, aero_mode_name, density, ncid_ic, aero_data)
 
   n_proc = pmc_mpi_size()
   rem = mod(nx, n_proc)
@@ -180,7 +115,7 @@ program make_ics
 
   do i = is_local,ie_local
      do j = js,je
-        call create_ics(i, j, nz, n_modes, n_aero_species, &
+        call create_ics(i, j, nz, n_modes, n_spec, &
              aero_values(:,:,i,j,:), aero_data, mode_diams, &
              mode_std, mode_vol_fracs, mode_source, file_prefix)
      end do
@@ -188,9 +123,8 @@ program make_ics
 
   deallocate(mode_diams)
   deallocate(mode_std)
-  deallocate(mode_num_concs)
   deallocate(mode_vol_fracs)
-  deallocate(aero_spec_name)
+  deallocate(aero_mode_name)
   deallocate(aero_values)
 
   call pmc_mpi_finalize()
@@ -250,7 +184,8 @@ contains
     !> Standard deviation of each mode.
     real(kind=dp), intent(in) :: mode_std(num_modes)
     !> Volume fractions of each mode.
-    real(kind=dp), intent(in) :: mode_vol_fracs(num_modes, 20)
+    real(kind=dp), intent(in) :: mode_vol_fracs(num_modes, &
+         aero_data_n_spec(aero_data))
     !> Source number.
     integer, intent(in) :: mode_source(num_modes)
     !> Aerosol mass concentrations.
@@ -379,38 +314,6 @@ contains
     integer :: dimid
     integer :: bdy_width
     integer :: i_time, i, spec_index, i_mode_pmc
-    
-    ! MAM3 species: so4
-    integer, parameter :: num_mode_mam3 = 3 
-    integer, parameter :: num_spec_mam3 = 6 
-    logical, dimension(num_mode_mam3,num_spec_mam3) :: mode_contains_species
-    character(len=3), dimension(num_spec_mam3) :: aero_names_mam3 = &
-       ["so4", "ncl", "bc ", "pom", "soa", "dst"]
-    character(len=4), dimension(num_spec_mam3) :: aero_names_pmc = &
-       ["SO4 ","Na  ", "BC  ", "OC  ", "API1", "OIN "]
-    integer, dimension(num_mode_mam3) :: pmc_to_mam3_map
-
-    real(kind=dp), parameter :: mw_na = 22.990d0
-    real(kind=dp), parameter :: mw_cl = 35.450d0
-
-    real(kind=dp), dimension(num_spec_mam3) :: aero_factors = &
-       [96.0d0/115.0d0, mw_na / (mw_na + mw_cl), 1.0d0, 1.0d0, 1.0d0, 1.0d0]
-
-
- 
-    mode_contains_species = .false.
-
-    mode_contains_species(1,1) = .true.
-    mode_contains_species(1,2) = .true.
-    mode_contains_species(1,5) = .true.
-    mode_contains_species(2,:) = .true.
-    mode_contains_species(3,1) = .true.
-    mode_contains_species(3,2) = .true.
-    mode_contains_species(3,6) = .true.
-
-    pmc_to_mam3_map(1) = 2
-    pmc_to_mam3_map(2) = 1
-    pmc_to_mam3_map(3) = 3
 
     if (pmc_mpi_rank() == 0) then
        print*, 'loading aerosol data'
@@ -421,22 +324,24 @@ contains
     do i_mode = 1,num_mode_mam3
        i_mode_pmc = pmc_to_mam3_map(i_mode)
        do i_spec = 1,num_spec_mam3
-          if (mode_contains_species(pmc_to_mam3_map(i_mode), i_spec)) then
+          if (mode_contains_species(i_mode, i_spec)) then
              ! in Reverse: Time, bdy_width, bottom_top, south_north
              write(var_name,'(A,A,I1.1)') trim(aero_names_mam3(i_spec)),"_a",i_mode
              if (pmc_mpi_rank() == 0) then
                 print*, 'reading aerosol species ', var_name
              end if
              call pmc_nc_read_real_4d(ncid, temp_species, var_name, .true.)
-             ! Find the partmc species
+             ! Find the PartMC species index
              spec_index = aero_data_spec_by_name(aero_data, trim(aero_names_pmc(i_spec)))
              mass_conc(i_mode_pmc,spec_index,:,:,:) = mass_conc(i_mode_pmc,spec_index,:,:,:) &
                   + temp_species(:,:,:,1) * aero_factors(i_spec)
+             ! MAM3 SO4 to PartMC requires some ammonium
              if (aero_names_mam3(i_spec) == "so4") then
                 spec_index = aero_data_spec_by_name(aero_data, "NH4")
                 mass_conc(i_mode_pmc,spec_index,:,:,:) = &
                      mass_conc(i_mode_pmc,spec_index,:,:,:) &
                      + temp_species(:,:,:,1) * (1.0d0 - aero_factors(i_spec))
+             ! MAM3 sea salt to PartMC is a combination of Na and Cl
              else if (aero_names_mam3(i_spec) == "ncl") then
                 spec_index = aero_data_spec_by_name(aero_data, "Cl")
                 mass_conc(i_mode_pmc,spec_index,:,:,:) = &
@@ -461,30 +366,6 @@ contains
     end do
 
   end subroutine load_data_aero
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Makes a string all lowercase.
-  function make_lower(strIn)
-
-    !> Input string
-    character(len=*), intent(in) :: strIn
-
-    character(len=len(strIn)) :: make_lower
-    integer :: i,j
-
-    do i = 1, len(strIn)
-       j = iachar(strIn(i:i))
-       if (j<= iachar("9")) then
-          make_lower(i:i) = strIn(i:i)
-       else if (j>= iachar("a") .and. j<=iachar("z") ) then
-          make_lower(i:i) = strIn(i:i)
-       else
-          make_lower(i:i) = achar(iachar(strIn(i:i))+32)
-       end if
-    end do
-
-  end function make_lower
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

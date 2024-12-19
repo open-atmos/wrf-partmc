@@ -99,7 +99,7 @@ program make_ics
   allocate(density(is:ie,js:je,nz))
 
   call load_data_aero(aero_values, n_modes, n_spec, nx, &
-       ny, nz, aero_mode_name, density, ncid_ic, aero_data)
+       ny, nz, density, ncid_ic, aero_data)
 
   n_proc = pmc_mpi_size()
   rem = mod(nx, n_proc)
@@ -283,7 +283,7 @@ contains
 
   !> Load aerosol data from WRF initial condition file.
   subroutine load_data_aero(mass_conc, num_mode, num_spec, nx, ny, nz, &
-       spec_name, density, ncid, aero_data)
+       density, ncid, aero_data)
 
     !> Mass concentration.
     real(kind=dp), intent(inout), dimension(num_mode,num_spec,nx,ny,nz) :: &
@@ -306,8 +306,6 @@ contains
     type(aero_data_t), intent(in) :: aero_data
    
     character(len=100) :: var_name
-    character(len=100), dimension(num_mode) :: spec_name
-    integer, parameter :: num_bin = 8
     real(kind=dp), allocatable, dimension(:,:,:,:) :: temp_species
     integer :: i_mode, j_bin, i_spec
     integer :: ind

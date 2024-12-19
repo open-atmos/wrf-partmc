@@ -17,7 +17,7 @@ program make_bcs
   !> NetCDF file ID, in data mode.
   integer :: ncid_bc, ncid_ic
 
-  character(len=100), allocatable, dimension(:) :: aero_spec_name
+  character(len=100), allocatable, dimension(:) :: aero_mode_name
   real(kind=dp), allocatable, dimension(:,:,:,:,:) :: mass_conc
   real(kind=dp), allocatable, dimension(:,:,:) :: density
   character(len=100) :: name
@@ -132,7 +132,7 @@ program make_bcs
 
   n_spec = aero_data_n_spec(aero_data)
 
-  call get_mode_parameters(aero_spec_name, mode_diams, mode_std, &
+  call get_mode_parameters(aero_mode_name, mode_diams, mode_std, &
        mode_vol_fracs, mode_source, aero_data)
 
   ! do XS
@@ -142,7 +142,7 @@ program make_bcs
   call pmc_mpi_barrier()
 
   call load_data_aero(mass_conc, 'BXS', n_modes, n_spec, nt, &
-       ny, nz, aero_spec_name, ncid_bc)
+       ny, nz, ncid_bc)
 
   do j = js_local,je_local
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,j,:,:), &
@@ -155,7 +155,7 @@ program make_bcs
   i = ie
  
   call load_data_aero(mass_conc, 'BXE', n_modes, n_spec, nt, &
-       ny, nz, aero_spec_name, ncid_bc)
+       ny, nz, ncid_bc)
 
   do j = js_local,je_local
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,j,:,:), &
@@ -172,7 +172,7 @@ program make_bcs
   allocate(mass_conc(n_modes,n_spec,is:ie,nz,nt))
 
   call load_data_aero(mass_conc, 'BYS', n_modes, n_spec, nt, &
-       nx, nz, aero_spec_name, ncid_bc)
+       nx, nz, ncid_bc)
 
   do i = is_local,ie_local
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,i,:,:), &
@@ -185,7 +185,7 @@ program make_bcs
   j = je
 
   call load_data_aero(mass_conc, 'BYE', n_modes, n_spec, nt, &
-       nx, nz, aero_spec_name, ncid_bc)
+       nx, nz, ncid_bc)
   do i = is_local,ie_local 
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,i,:,:), &
           n_spec, nt, mode_diams, &
@@ -195,7 +195,6 @@ program make_bcs
 
   deallocate(mode_diams)
   deallocate(mode_std)
-  deallocate(aero_spec_name)
   deallocate(mass_conc)
 
   call pmc_mpi_finalize()
@@ -363,7 +362,7 @@ contains
 
   !> Load aerosol data from WRF boundary condition file.
   subroutine load_data_aero(mass_conc,boundary, num_mode, num_spec, num_time, n_dim1, nz, &
-       spec_name, ncid)
+       ncid)
 
     !> Mass concentration.
     real(kind=dp), intent(out), dimension(num_mode,num_spec,n_dim1,nz,num_time) :: mass_conc
@@ -383,7 +382,6 @@ contains
     integer, intent(in) :: ncid
    
     character(len=100) :: var_name
-    character(len=100), dimension(num_mode) :: spec_name
     real(kind=dp), allocatable, dimension(:,:,:,:) :: temp_species
     integer :: i_mode, j_bin
     integer :: ind

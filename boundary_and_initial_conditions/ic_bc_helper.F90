@@ -140,6 +140,8 @@ contains
     mode_std(3) =  1.8d0
     mode_source(3) = 3
 
+    mode_vol_fracs = 0.0d0
+
   end subroutine get_mode_parameters
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

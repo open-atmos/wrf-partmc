@@ -350,18 +350,9 @@ contains
        end do
     end do
 
-    ! Convert from WRF-Chem units of micrograms per kg of dry air to kg per m^3
-    do i_mode = 1,num_mode
-    do i_spec = 1,num_spec
-    do i = 1,nx
-    do j = 1,ny
-    do k = 1,nz
-        mass_conc(i_mode,i_spec,i,j,k) = mass_conc(i_mode,i_spec,i,j,k) / 1.0d9
-    end do
-    end do
-    end do
-    end do
-    end do
+    ! Convert from WRF-Chem units of micrograms per kg of dry air to kg per kg
+    ! of dry air. WRF-PartMC will convert to kg per m-3.
+    mass_conc = mass_conc / 1d9
 
   end subroutine load_data_aero
 

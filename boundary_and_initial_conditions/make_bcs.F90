@@ -8,6 +8,7 @@ program make_bcs
   use pmc_spec_file
   use pmc_mpi
   use mpi
+  use ic_bc_helper
 
   implicit none
  
@@ -16,7 +17,7 @@ program make_bcs
   !> NetCDF file ID, in data mode.
   integer :: ncid_bc, ncid_ic
 
-  character(len=100), allocatable, dimension(:) :: aero_spec_name
+  character(len=100), allocatable, dimension(:) :: aero_mode_name
   real(kind=dp), allocatable, dimension(:,:,:,:,:) :: mass_conc
   real(kind=dp), allocatable, dimension(:,:,:) :: density
   character(len=100) :: name
@@ -27,14 +28,13 @@ program make_bcs
   integer :: nx, ny, nz, nt
   integer :: i,j,k
   integer :: i_mode
-  integer :: n_aero_species
+  integer :: n_spec
   type(aero_data_t) :: aero_data
   integer :: is, ie, js, je
   integer :: is_local, ie_local, js_local, je_local
   real(kind=dp), allocatable, dimension(:) :: aero_bc_rate, &
        aero_bc_time
-  real(kind=dp), allocatable, dimension(:) :: mode_diams, mode_std, &
-       mode_num_concs
+  real(kind=dp), allocatable, dimension(:) :: mode_diams, mode_std
   integer, allocatable, dimension(:) :: mode_source
   real(kind=dp), allocatable, dimension(:,:) :: mode_vol_fracs
   character(len=100) :: suffix
@@ -43,7 +43,6 @@ program make_bcs
   character(len=300) :: file_path, filename, file_prefix, command
   character(len=300) :: output_file_path, output_file_prefix
   integer :: ks, ke, n_proc, rem_x, rem_y
-  logical, parameter :: mam3 = .true.
 
   call pmc_mpi_init()
 
@@ -131,45 +130,23 @@ program make_bcs
 
   n_modes = 3
 
-  n_aero_species = aero_data_n_spec(aero_data)
+  n_spec = aero_data_n_spec(aero_data)
 
-  allocate(mode_diams(n_modes))
-  allocate(mode_std(n_modes))
-  allocate(mode_num_concs(n_modes))
-  allocate(mode_vol_fracs(n_modes,n_aero_species))
-  allocate(mode_source(n_modes))
-  allocate(aero_spec_name(n_modes))
-
-  ! Zero everything out
-  mode_num_concs = 0.0d0
-  mode_vol_fracs = 0.0d0
-  aero_spec_name(1) = "aitken"
-  mode_diams(1) = 0.0260d-6
-  mode_std(1) =  1.6d0
-  mode_source(1) = 1
-
-  aero_spec_name(2) = "accumulation"
-  mode_diams(2) =  0.11d-6
-  mode_std(2) =  1.8d0
-  mode_source(2) = 2
-
-  aero_spec_name(3) = "coarse"
-  mode_diams(3) =  2.0d-6
-  mode_std(3) =  1.8d0
-  mode_source(3) = 3
+  call get_mode_parameters(aero_mode_name, mode_diams, mode_std, &
+       mode_vol_fracs, mode_source, aero_data)
 
   ! do XS
   i = is
-  allocate(mass_conc(n_modes,n_aero_species,js:je,nz,nt))
+  allocate(mass_conc(n_modes,n_spec,js:je,nz,nt))
 
   call pmc_mpi_barrier()
 
-  call load_data_aero(mass_conc, 'BXS', n_modes, n_aero_species, nt, &
-       ny, nz, aero_spec_name, ncid_bc)
+  call load_data_aero(mass_conc, 'BXS', n_modes, n_spec, nt, &
+       ny, nz, ncid_bc)
 
   do j = js_local,je_local
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,j,:,:), &
-          n_aero_species, nt, mode_diams, &
+          n_spec, nt, mode_diams, &
           mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
           file_prefix)
   end do
@@ -177,12 +154,12 @@ program make_bcs
   ! do XE
   i = ie
  
-  call load_data_aero(mass_conc, 'BXE', n_modes, n_aero_species, nt, &
-       ny, nz, aero_spec_name, ncid_bc)
+  call load_data_aero(mass_conc, 'BXE', n_modes, n_spec, nt, &
+       ny, nz, ncid_bc)
 
   do j = js_local,je_local
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,j,:,:), &
-          n_aero_species, nt, mode_diams, &
+          n_spec, nt, mode_diams, &
           mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
           file_prefix)
   end do
@@ -192,14 +169,14 @@ program make_bcs
   ! do YS
   j = js
 
-  allocate(mass_conc(n_modes,n_aero_species,is:ie,nz,nt))
+  allocate(mass_conc(n_modes,n_spec,is:ie,nz,nt))
 
-  call load_data_aero(mass_conc, 'BYS', n_modes, n_aero_species, nt, &
-       nx, nz, aero_spec_name, ncid_bc)
+  call load_data_aero(mass_conc, 'BYS', n_modes, n_spec, nt, &
+       nx, nz, ncid_bc)
 
   do i = is_local,ie_local
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,i,:,:), &
-          n_aero_species, nt, mode_diams, &
+          n_spec, nt, mode_diams, &
           mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
           file_prefix)
   end do
@@ -207,20 +184,15 @@ program make_bcs
   ! do YE
   j = je
 
-  call load_data_aero(mass_conc, 'BYE', n_modes, n_aero_species, nt, &
-       nx, nz, aero_spec_name, ncid_bc)
+  call load_data_aero(mass_conc, 'BYE', n_modes, n_spec, nt, &
+       nx, nz, ncid_bc)
   do i = is_local,ie_local 
      call create_bcs(i, j, nz, aero_data, n_modes, mass_conc(:,:,i,:,:), &
-          n_aero_species, nt, mode_diams, &
+          n_spec, nt, mode_diams, &
           mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
           file_prefix)
   end do
 
-  deallocate(mode_diams)
-  deallocate(mode_std)
-  deallocate(mode_num_concs)
-  deallocate(mode_vol_fracs)
-  deallocate(aero_spec_name)
   deallocate(mass_conc)
 
   call pmc_mpi_finalize()
@@ -247,7 +219,8 @@ contains
     real(kind=dp) :: Dmax, Dmin
 
     k = 3
-    tmp = density*(const%pi/ 6.0d0)*diam**3.0 * exp(k**2.0d0 / 2.0d0 * log(std)**2.0d0)
+    tmp = density*(const%pi/ 6.0d0)*diam**3.0 * exp(k**2.0d0 / 2.0d0 &
+         * log(std)**2.0d0)
     get_num_conc = mass / tmp
 
   end function get_num_conc
@@ -255,9 +228,9 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> Creates a boundary condition NetCDF for a given grid cell.
-  subroutine create_bcs(i, j, nz, aero_data, num_modes, values, num_aero_species, num_times, mode_diams, &
-       mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
-       file_prefix)
+  subroutine create_bcs(i, j, nz, aero_data, num_modes, values, &
+       num_aero_species, num_times, mode_diams, mode_std,  mode_vol_fracs, &
+       mode_source, aero_bc_rate, aero_bc_time, file_prefix)
 
     !> Index i for grid cell.
     integer, intent(in) :: i
@@ -281,7 +254,8 @@ contains
     !> Source number.
     integer, intent(in) :: mode_source(num_modes)
     !> Number concentrations.
-    real(kind=dp), intent(in) :: values(num_modes, num_aero_species, nz, num_times)
+    real(kind=dp), intent(in) :: values(num_modes, num_aero_species, nz, &
+         num_times)
     !> Boundary condition scale factor for aerosols.
     real(kind=dp), intent(in) :: aero_bc_rate(num_times)
     !> Boundary condition update time for aerosols.
@@ -327,8 +301,8 @@ contains
        total_num_conc = 0.0d0
        do i_spec = 1,num_aero_species
          total_num_conc = total_num_conc + get_num_conc( &
-            values(i_mode,i_spec,k,i_time), mode_diams(i_mode), mode_std(i_mode), &
-            aero_data%density(i_spec))
+            values(i_mode,i_spec,k,i_time), mode_diams(i_mode), &
+            mode_std(i_mode), aero_data%density(i_spec))
        end do
        num_conc(i_time,k,i_mode) = total_num_conc
        vol_frac(i_time,k,i_mode,:) = values(i_mode,:,k,i_time) / &
@@ -387,11 +361,12 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> Load aerosol data from WRF boundary condition file.
-  subroutine load_data_aero(mass_conc,boundary, num_mode, num_spec, num_time, n_dim1, nz, &
-       spec_name, ncid)
+  subroutine load_data_aero(mass_conc,boundary, num_mode, num_spec, num_time, &
+       n_dim1, nz, ncid)
 
     !> Mass concentration.
-    real(kind=dp), intent(out), dimension(num_mode,num_spec,n_dim1,nz,num_time) :: mass_conc
+    real(kind=dp), intent(out), dimension( &
+         num_mode,num_spec,n_dim1,nz,num_time) :: mass_conc
     !> Boundary of interest.
     character(len=3), intent(in) :: boundary
     !> Number of modes.
@@ -408,42 +383,13 @@ contains
     integer, intent(in) :: ncid
    
     character(len=100) :: var_name
-    character(len=100), dimension(num_mode) :: spec_name
-    integer, parameter :: num_bin = 8
     real(kind=dp), allocatable, dimension(:,:,:,:) :: temp_species
     integer :: i_mode, j_bin
     integer :: ind
     integer :: dimid
     integer :: bdy_width
     integer :: i_time, i
-
-    ! MAM3 species: so4
-    integer, parameter :: num_mode_mam3 = 3
-    integer, parameter :: num_spec_mam3 = 6
-    logical, dimension(num_mode_mam3,num_spec_mam3) :: mode_contains_species
-    character(len=3), dimension(num_spec_mam3) :: aero_names_mam3 = &
-       ["so4", "ncl", "bc ", "pom", "soa", "dst"]
-    character(len=4), dimension(num_spec_mam3) :: aero_names_pmc = &
-       ["SO4 ","Na  ", "BC  ", "OC  ", "API1", "OIN "]
-    integer, dimension(num_mode_mam3) :: pmc_to_mam3_map
     integer :: i_spec, i_mode_pmc, spec_index
-    real(kind=dp), parameter :: mw_na = 22.990d0
-    real(kind=dp), parameter :: mw_cl = 35.450d0
-
-
-    real(kind=dp), dimension(num_spec_mam3) :: aero_factors = &
-       [96.0d0/115.0d0, mw_na / (mw_na + mw_cl), 1.0d0, 1.0d0, 1.0d0, 1.0d0]
-
-    mode_contains_species = .false.
-
-    mode_contains_species(1,1) = .true.
-    mode_contains_species(1,2) = .true.
-    mode_contains_species(1,5) = .true.
-    mode_contains_species(2,:) = .true.
-    mode_contains_species(3,1) = .true.
-    mode_contains_species(3,2) = .true.
-    mode_contains_species(3,6) = .true.
-
 
     if (pmc_mpi_rank() == 0) then
        print*, 'loading aerosol data for boundary ', boundary
@@ -459,26 +405,23 @@ contains
        ind = 1
     end if
 
-    pmc_to_mam3_map(1) = 2
-    pmc_to_mam3_map(2) = 1
-    pmc_to_mam3_map(3) = 3
-
-!    do i_mode = 1,num_mode
-!       do j_bin = 1,num_bin
     do i_mode = 1,num_mode_mam3
        i_mode_pmc = pmc_to_mam3_map(i_mode)
        do i_spec = 1,num_spec_mam3
-          if (mode_contains_species(pmc_to_mam3_map(i_mode), i_spec)) then
+          if (mode_contains_species(i_mode, i_spec)) then
              ! in Reverse: Time, bdy_width, bottom_top, south_north
-             write(var_name,'(A,A,I1.1,A,A)') trim(aero_names_mam3(i_spec)),"_a",i_mode,"_",boundary
+             write(var_name,'(A,A,I1.1,A,A)') trim(aero_names_mam3(i_spec)), &
+                  "_a",i_mode,"_",boundary
 
              if (pmc_mpi_rank() == 0) then
                 print*, 'reading aerosol species ', trim(var_name)
              endif
              call pmc_nc_read_real_4d(ncid, temp_species, var_name, .true.)
              ! Find the partmc species
-             spec_index = aero_data_spec_by_name(aero_data, trim(aero_names_pmc(i_spec)))
-             mass_conc(i_mode_pmc,spec_index,:,:,:) = mass_conc(i_mode_pmc,spec_index,:,:,:) &
+             spec_index = aero_data_spec_by_name(aero_data, &
+                  trim(aero_names_pmc(i_spec)))
+             mass_conc(i_mode_pmc,spec_index,:,:,:) = &
+                  mass_conc(i_mode_pmc,spec_index,:,:,:) &
                   + temp_species(:,:,ind,:) * aero_factors(i_spec)
              if (aero_names_mam3(i_spec) == "so4") then
                 spec_index = aero_data_spec_by_name(aero_data, "NH4")
@@ -491,47 +434,15 @@ contains
                      mass_conc(i_mode_pmc,spec_index,:,:,:) &
                      + temp_species(:,:,ind,:) * (1.0d0 - aero_factors(i_spec))
              end if
-!          mass_conc(i_mode,:,:,:) = mass_conc(i_mode,:,:,:) + temp_species(:,:,ind,:)
           end if
        end do
     end do
 
-    ! Convert from WRF-Chem units of micrograms per kg of dry air to kg per m^3
-    do i_mode = 1,num_mode
-    do i_spec = 1,num_spec
-    do i_time = 1,num_time
-    do i = 1, n_dim1
-        mass_conc(i_mode,i_spec,i,:,i_time) = mass_conc(i_mode,i_spec,i,:,i_time) / 1d9
-    end do
-    end do
-    end do
-    end do
+    ! Convert from WRF-Chem units of micrograms per kg of dry air to kg per kg
+    ! of dry air. WRF-PartMC will convert to kg per m-3.
+    mass_conc =  mass_conc / 1d9
 
   end subroutine load_data_aero
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Makes a string all lowercase.
-  function make_lower(strIn)
-
-    !> Input string
-    character(len=*), intent(in) :: strIn
-
-    character(len=len(strIn)) :: make_lower
-    integer :: i,j
-
-    do i = 1, len(strIn)
-       j = iachar(strIn(i:i))
-       if (j<= iachar("9")) then
-          make_lower(i:i) = strIn(i:i)
-       else if (j>= iachar("a") .and. j<=iachar("z") ) then
-          make_lower(i:i) = strIn(i:i)
-       else
-          make_lower(i:i) = achar(iachar(strIn(i:i))+32)
-       end if
-    end do
-
-  end function make_lower
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -542,58 +453,6 @@ contains
          & <output file prefix>'
 
   end subroutine print_usage
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Read a simple real array from a NetCDF file.
-  subroutine pmc_nc_read_string_array(ncid, var, name, must_be_present)
-
-    !> NetCDF file ID, in data mode.
-    integer, intent(in) :: ncid
-    !> Data to read, must be correctly sized.
-    character(len=19), allocatable, dimension(:), intent(inout) :: var
-    !> Variable name in NetCDF file.
-    character(len=*), intent(in) :: name
-    !> Whether the variable must be present in the NetCDF file
-    !> (default .true.).
-    logical, optional, intent(in) :: must_be_present
-
-    integer :: varid, status
-    logical :: use_must_be_present
-    integer :: dimids(2)
-    integer :: dim_size(2)
-    integer :: start(2)
-    integer :: count(2)
-    integer :: i
-
-    if (present(must_be_present)) then
-       use_must_be_present = must_be_present
-    else
-       use_must_be_present = .true.
-    end if
-    status = nf90_inq_varid(ncid, name, varid)
-    if ((.not. use_must_be_present) .and. (status == NF90_ENOTVAR)) then
-       ! variable was not present, but that's ok
-       var = ""
-       return
-    end if
-
-    ! Find the varid
-    status = nf90_inq_varid(ncid, name, varid)
-    ! Inquire for the dimension IDs
-    call pmc_nc_check(nf90_inquire_variable(ncid, varid, dimids=dimids))
-    ! Loop over all the dimensions to get their lengths
-    do dim = 1, 2
-       call pmc_nc_check(nf90_inquire_dimension(ncid, dimids(dim), &
-            len=dim_size(dim)))
-    end do
-
-    allocate(var(dim_size(2)))
-    call pmc_nc_check_msg(status, "inquiring variable " // trim(name))
-    call pmc_nc_check_msg(nf90_get_var(ncid, varid, var), &
-         "getting variable " // trim(name))
-
-  end subroutine pmc_nc_read_string_array
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

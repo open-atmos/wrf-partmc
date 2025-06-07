@@ -104,14 +104,15 @@ program make_ics
   n_proc = pmc_mpi_size()
   rem = mod(nx, n_proc)
   if (pmc_mpi_rank() < rem) then
-      is_local = pmc_mpi_rank() * ((nx / n_proc) + 1) + 1
-      ie_local =( pmc_mpi_rank() + 1)  * ((nx / n_proc) + 1)
+     is_local = pmc_mpi_rank() * ((nx / n_proc) + 1) + 1
+     ie_local =( pmc_mpi_rank() + 1)  * ((nx / n_proc) + 1)
   else
-      is_local = pmc_mpi_rank() * (nx / n_proc) + rem + 1
-      ie_local =( pmc_mpi_rank() + 1)  * (nx / n_proc) + rem
+     is_local = pmc_mpi_rank() * (nx / n_proc) + rem + 1
+     ie_local =( pmc_mpi_rank() + 1)  * (nx / n_proc) + rem
   end if
 
-  print*, 'MPI rank:', pmc_mpi_rank(), 'start: ', is_local, 'finish: ',ie_local 
+  print*, 'MPI rank:', pmc_mpi_rank(), 'start: ', is_local, 'finish: ', &
+       ie_local 
 
   do i = is_local,ie_local
      do j = js,je
@@ -120,12 +121,6 @@ program make_ics
              mode_std, mode_vol_fracs, mode_source, file_prefix)
      end do
   end do
-
-  deallocate(mode_diams)
-  deallocate(mode_std)
-  deallocate(mode_vol_fracs)
-  deallocate(aero_mode_name)
-  deallocate(aero_values)
 
   call pmc_mpi_finalize()
  
@@ -148,7 +143,8 @@ contains
 
     real(kind=dp) :: tmp
 
-    tmp = (species_density*const%pi/ 6.0d0)*diam**3.0 * exp(4.5d0 * log(std)**2.0d0)
+    tmp = (species_density*const%pi/ 6.0d0)*diam**3.0 * exp(4.5d0 &
+         * log(std)**2.0d0)
 
     get_num_conc = mass / tmp
 
@@ -324,14 +320,17 @@ contains
        do i_spec = 1,num_spec_mam3
           if (mode_contains_species(i_mode, i_spec)) then
              ! in Reverse: Time, bdy_width, bottom_top, south_north
-             write(var_name,'(A,A,I1.1)') trim(aero_names_mam3(i_spec)),"_a",i_mode
+             write(var_name,'(A,A,I1.1)') trim(aero_names_mam3(i_spec)),"_a", &
+                  i_mode
              if (pmc_mpi_rank() == 0) then
                 print*, 'reading aerosol species ', var_name
              end if
              call pmc_nc_read_real_4d(ncid, temp_species, var_name, .true.)
              ! Find the PartMC species index
-             spec_index = aero_data_spec_by_name(aero_data, trim(aero_names_pmc(i_spec)))
-             mass_conc(i_mode_pmc,spec_index,:,:,:) = mass_conc(i_mode_pmc,spec_index,:,:,:) &
+             spec_index = aero_data_spec_by_name(aero_data, &
+                  trim(aero_names_pmc(i_spec)))
+             mass_conc(i_mode_pmc,spec_index,:,:,:) = &
+                  mass_conc(i_mode_pmc,spec_index,:,:,:) &
                   + temp_species(:,:,:,1) * aero_factors(i_spec)
              ! MAM3 SO4 to PartMC requires some ammonium
              if (aero_names_mam3(i_spec) == "so4") then

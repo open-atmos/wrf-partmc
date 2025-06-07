@@ -193,8 +193,6 @@ program make_bcs
           file_prefix)
   end do
 
-  deallocate(mode_diams)
-  deallocate(mode_std)
   deallocate(mass_conc)
 
   call pmc_mpi_finalize()
@@ -221,7 +219,8 @@ contains
     real(kind=dp) :: Dmax, Dmin
 
     k = 3
-    tmp = density*(const%pi/ 6.0d0)*diam**3.0 * exp(k**2.0d0 / 2.0d0 * log(std)**2.0d0)
+    tmp = density*(const%pi/ 6.0d0)*diam**3.0 * exp(k**2.0d0 / 2.0d0 &
+         * log(std)**2.0d0)
     get_num_conc = mass / tmp
 
   end function get_num_conc
@@ -229,9 +228,9 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> Creates a boundary condition NetCDF for a given grid cell.
-  subroutine create_bcs(i, j, nz, aero_data, num_modes, values, num_aero_species, num_times, mode_diams, &
-       mode_std, mode_vol_fracs, mode_source, aero_bc_rate, aero_bc_time, &
-       file_prefix)
+  subroutine create_bcs(i, j, nz, aero_data, num_modes, values, &
+       num_aero_species, num_times, mode_diams, mode_std,  mode_vol_fracs, &
+       mode_source, aero_bc_rate, aero_bc_time, file_prefix)
 
     !> Index i for grid cell.
     integer, intent(in) :: i
@@ -255,7 +254,8 @@ contains
     !> Source number.
     integer, intent(in) :: mode_source(num_modes)
     !> Number concentrations.
-    real(kind=dp), intent(in) :: values(num_modes, num_aero_species, nz, num_times)
+    real(kind=dp), intent(in) :: values(num_modes, num_aero_species, nz, &
+         num_times)
     !> Boundary condition scale factor for aerosols.
     real(kind=dp), intent(in) :: aero_bc_rate(num_times)
     !> Boundary condition update time for aerosols.
@@ -301,8 +301,8 @@ contains
        total_num_conc = 0.0d0
        do i_spec = 1,num_aero_species
          total_num_conc = total_num_conc + get_num_conc( &
-            values(i_mode,i_spec,k,i_time), mode_diams(i_mode), mode_std(i_mode), &
-            aero_data%density(i_spec))
+            values(i_mode,i_spec,k,i_time), mode_diams(i_mode), &
+            mode_std(i_mode), aero_data%density(i_spec))
        end do
        num_conc(i_time,k,i_mode) = total_num_conc
        vol_frac(i_time,k,i_mode,:) = values(i_mode,:,k,i_time) / &
@@ -361,11 +361,12 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> Load aerosol data from WRF boundary condition file.
-  subroutine load_data_aero(mass_conc,boundary, num_mode, num_spec, num_time, n_dim1, nz, &
-       ncid)
+  subroutine load_data_aero(mass_conc,boundary, num_mode, num_spec, num_time, &
+       n_dim1, nz, ncid)
 
     !> Mass concentration.
-    real(kind=dp), intent(out), dimension(num_mode,num_spec,n_dim1,nz,num_time) :: mass_conc
+    real(kind=dp), intent(out), dimension( &
+         num_mode,num_spec,n_dim1,nz,num_time) :: mass_conc
     !> Boundary of interest.
     character(len=3), intent(in) :: boundary
     !> Number of modes.
@@ -409,15 +410,18 @@ contains
        do i_spec = 1,num_spec_mam3
           if (mode_contains_species(i_mode, i_spec)) then
              ! in Reverse: Time, bdy_width, bottom_top, south_north
-             write(var_name,'(A,A,I1.1,A,A)') trim(aero_names_mam3(i_spec)),"_a",i_mode,"_",boundary
+             write(var_name,'(A,A,I1.1,A,A)') trim(aero_names_mam3(i_spec)), &
+                  "_a",i_mode,"_",boundary
 
              if (pmc_mpi_rank() == 0) then
                 print*, 'reading aerosol species ', trim(var_name)
              endif
              call pmc_nc_read_real_4d(ncid, temp_species, var_name, .true.)
              ! Find the partmc species
-             spec_index = aero_data_spec_by_name(aero_data, trim(aero_names_pmc(i_spec)))
-             mass_conc(i_mode_pmc,spec_index,:,:,:) = mass_conc(i_mode_pmc,spec_index,:,:,:) &
+             spec_index = aero_data_spec_by_name(aero_data, &
+                  trim(aero_names_pmc(i_spec)))
+             mass_conc(i_mode_pmc,spec_index,:,:,:) = &
+                  mass_conc(i_mode_pmc,spec_index,:,:,:) &
                   + temp_species(:,:,ind,:) * aero_factors(i_spec)
              if (aero_names_mam3(i_spec) == "so4") then
                 spec_index = aero_data_spec_by_name(aero_data, "NH4")

@@ -622,7 +622,7 @@ while ( <CONFIGURE_DEFAULTS> )
            }
        }
 
-       if ( $ENV{PMC_USE_MOSAIC} eq "1" )
+     if ( $ENV{MOSAIC} eq "1" )
        {
         $_ =~ s:CONFIGURE_MOSAIC_LIB:\$\(WRF_SRC_ROOT_DIR)/../mosaic/libmosaic.a:g ;
         $_ =~ s:CONFIGURE_MOSAIC_INCLUDE:-I\$\(WRF_SRC_ROOT_DIR)/../mosaic -I\$\(WRF_SRC_ROOT_DIR)/../mosaic/datamodules:g ;

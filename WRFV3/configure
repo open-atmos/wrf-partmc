@@ -598,7 +598,7 @@ fi
 if [ -n "MOSAIC" ] ; then
   if [ $MOSAIC = 1 ] ; then
     echo building WRF-PartMC with MOSAIC option
-    compileflags="${compileflags}!-DPMC_USE_MOSAIC"
+    compileflags="${compileflags}!-DPMC_USE_MOSAIC!-DPMC_USE_MOSAIC_MULTI_OPT"
   else
     compileflags="${compileflags} "
   fi
@@ -799,6 +799,27 @@ if [ $os = "Linux" -o $os = "Darwin" ]; then
   CCOMP="`type $CCOMP 2>/dev/null | awk '{print $NF}' | sed -e 's/(//g;s/)//g'`"
 
   foo=foo_$$
+
+  grep '^SFC' configure.wrf | grep -i 'gfortran' > /dev/null
+  if [ $? ]
+  then
+
+    cat > ${foo}.F << EOF
+      PROGRAM GFORTRAN_VERSION_CHECK
+        IF (__GNUC__ .GT. 9) CALL EXIT(1)
+      END PROGRAM
+EOF
+
+    gfortran -o ${foo} ${foo}.F > /dev/null 2>&1 && ./${foo}
+    if [ $? -eq 1 ]
+    then
+      sed '/^FCCOMPAT/ s/$/ -fallow-argument-mismatch -fallow-invalid-boz/' configure.wrf > configure.wrf.edit
+      mv configure.wrf.edit configure.wrf
+    fi
+    rm ${foo} ${foo}.F 2> /dev/null
+  fi
+
+
 
 cat > ${foo}.c <<EOF 
  int main(int argc, char ** argv)

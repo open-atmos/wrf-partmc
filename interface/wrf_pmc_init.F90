@@ -125,7 +125,7 @@ contains
     integer :: wrf_i,wrf_j,wrf_k, i_mode, dummy
     real(kind=dp) :: time_ic, time_bc, t1, t2
     integer :: i_start,i_end,j_start,j_end,k_start,k_end
-    integer :: n_class
+    integer :: n_class, i_class
 
     ! Initialize the random number generator
     call pmc_srand(grid%random_seed, pmc_mpi_rank())
@@ -234,6 +234,8 @@ contains
 
     aero_data = input_aero_data
 
+    call aero_data_print(aero_data)
+
     n_parts = grid%num_particles
 
     call wrf_message('PartMC_init: Setting gas data for the WRF domain')
@@ -280,13 +282,12 @@ contains
     end if
     k_start = pmc_ks
     k_end = pmc_ke
-
     if (.not. config_flags%do_restart) then
        do j = j_start,j_end
        do i = i_start,i_end
-          call init_read_in_ics(grid, aero_states(i,:,j), gas_states(i,:,j), &
-               i, j, nz, aero_data, gas_data, env_states(i,:,j), &
-               grid%partmc_ics)
+          call init_read_in_ics(grid, aero_states, gas_states, i, j, nz, &
+               aero_data, gas_data, env_states, grid%partmc_ics, &
+               pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ks, pmc_ke)
        end do
        end do
     else
@@ -313,8 +314,7 @@ contains
             call init_read_in_emissions(scenario(i,k,j), i, j, k, aero_data, &
                  gas_data, grid%partmc_emissions)
           else
-             call init_zero_emissions(scenario(i,k,j), aero_data, &
-                  gas_data)
+             call init_zero_emissions(scenario(i,k,j), aero_data, gas_data)
           end if
        end do
        end do
@@ -323,8 +323,7 @@ contains
        do j = j_start,j_end
        do k = pmc_ks,pmc_ke
        do i = i_start,i_end
-       call init_zero_emissions(scenario(i,k,j), aero_data, &
-            gas_data)
+          call init_zero_emissions(scenario(i,k,j), aero_data, gas_data)
        end do
        end do
        end do
@@ -338,9 +337,11 @@ contains
        if (pmc_is == 1) then
           i = 1
           do j = max(pmc_js,1), min(pmc_je,global_ny)
-             call init_read_in_bcs(grid, scenario(i,:,j), i, j, nz, aero_data, &
-                  aero_states(i,:,j), gas_states(i,:,j), env_states(i,:,j), &
-                  grid%partmc_bcs, config_flags%do_restart)
+             call init_read_in_bcs(grid, scenario, i, j, nz, aero_data, &
+                  aero_states, gas_states, env_states, &
+                  grid%partmc_bcs, config_flags%do_restart, &
+                  pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ks, pmc_ke)
+
           end do
        end if
        print*, 'partmc_init: east boundary', pmc_ie, global_nx
@@ -348,9 +349,10 @@ contains
        if (pmc_ie == global_nx) then
           i = global_nx
           do j = max(pmc_js,1), min(pmc_je,global_ny)
-              call init_read_in_bcs(grid, scenario(i,:,j), i, j, nz, aero_data, &
-                   aero_states(i,:,j), gas_states(i,:,j), env_states(i,:,j), &
-                   grid%partmc_bcs, config_flags%do_restart)
+             call init_read_in_bcs(grid, scenario, i, j, nz, aero_data, &
+                  aero_states, gas_states, env_states, &
+                  grid%partmc_bcs, config_flags%do_restart, &
+                  pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ks, pmc_ke)
           end do
        end if
 
@@ -360,9 +362,10 @@ contains
           j = 1
           ! Loop changed to avoid corners that are also east/west boundaries
           do i = max(pmc_is,2), min(pmc_ie,global_nx-1)
-             call init_read_in_bcs(grid, scenario(i,:,j), i, j, nz, aero_data, &
-                  aero_states(i,:,j), gas_states(i,:,j), env_states(i,:,j), &
-                  grid%partmc_bcs, config_flags%do_restart)
+             call init_read_in_bcs(grid, scenario, i, j, nz, aero_data, &
+                  aero_states, gas_states, env_states, &
+                  grid%partmc_bcs, config_flags%do_restart, &
+                  pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ks, pmc_ke)
           end do
        end if
        ! North boundary
@@ -371,9 +374,10 @@ contains
           j = global_ny
           ! Loop changed to avoid corners that are also east/west boundaries
           do i = max(pmc_is,2), min(pmc_ie,global_nx-1)
-             call init_read_in_bcs(grid, scenario(i,:,j), i, j, nz, aero_data, &
-                  aero_states(i,:,j), gas_states(i,:,j), env_states(i,:,j), &
-                  grid%partmc_bcs, config_flags%do_restart)
+             call init_read_in_bcs(grid, scenario, i, j, nz, aero_data, &
+                  aero_states, gas_states, env_states, &
+                  grid%partmc_bcs, config_flags%do_restart, &
+                  pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ks, pmc_ke)
           end do
        end if
     end if
@@ -386,7 +390,6 @@ contains
 
     call pmc_mpi_bcast_string(uuid)
     grid%uuid = uuid
-
 
     ! Allocate the probability arrays for all cells including boundary
     do i = pmc_is, pmc_ie
@@ -408,72 +411,9 @@ contains
     call partmc_from_wrf(grid, gas_states, gas_data, pmc_is, pmc_ie, &
        pmc_js, pmc_je, pmc_ks, pmc_ke)
 
-    ! Put initial gas mixing ratios into chem array
-!    call partmc_to_wrf(grid, aero_states, aero_data, gas_states, gas_data, &
-!         pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ks, pmc_ke)
+    call wrf_message('Finished in the partmc initialization subroutine')
 
-
-    !!! Uncomment to generically add scalars
-    !do i = max(pmc_is,2), min(pmc_ie,global_nx-1)
-    !do k = pmc_ks, pmc_ke
-    !do j = max(pmc_js,2), min(pmc_je,global_ny-1)
-    !   grid%chem(i,k,j,p_NUM_CONC_a39) = 5.0e9
-    !end do
-    !end do
-    !end do
-    !if (pmc_js == 1) then
-    !j = 1
-    !do i = pmc_is, pmc_ie
-    !do k = pmc_ks, pmc_ke
-    !   grid%chem(i,k,j,p_NUM_CONC_a40) = 5.0e9
-    !end do
-    !end do
-    !end if
-    !if (pmc_je == global_ny) then
-    !j = global_ny
-    !do i = pmc_is, pmc_ie
-    !do k = pmc_ks, pmc_ke
-    !   grid%chem(i,k,j,p_NUM_CONC_a40) = 5.0e9
-    !end do
-    !end do
-    !end if
-    !if (pmc_is == 1) then
-    !i = pmc_is
-    !do j = pmc_js, pmc_je
-    !do k = pmc_ks, pmc_ke
-    !   grid%chem(i,k,j,p_NUM_CONC_a40) = 5.0e9
-    !end do
-    !end do
-    !end if
-    !if  (pmc_ie == global_nx) then
-    !i = global_nx
-    !do j = pmc_js, pmc_je
-    !do k = pmc_ks, pmc_ke
-    !   grid%chem(i,k,j,p_NUM_CONC_a40) = 5.0e9
-    !end do
-    !end do
-    !end if
-
-    !do i = pmc_is,pmc_ie
-    !do k = pmc_ks,pmc_ke
-    !do j = pmc_js,pmc_je
-    !    if (j < global_ny/2) then
-    !       grid%chem(i,k,j,p_NUM_CONC_a37) = 5.0e9
-    !    else
-    !       grid%chem(i,k,j,p_NUM_CONC_a38) = 5.0e9
-    !    end if
-    !end do
-    !end do
-    !end do
-
-    !do i = pmc_is,pmc_ie
-    !do k = pmc_ks,pmc_ke
-    !do j = pmc_js,pmc_je
-    !    grid%chem(i,k,j,p_NUM_CONC_a36) = 5.0e9
-    !end do
-    !end do
-    !end do
-
+    call pmc_mpi_barrier()
 
   end subroutine init_wrf_partmc
 
@@ -599,7 +539,8 @@ contains
     character(len=*), intent(in) :: prefix
 
     character(len=INPUT_FILE_PATH_NAME_LEN) :: file
-    character(len=AERO_MODE_NAME_LEN) :: mode_name, weight_class
+    character(len=AERO_MODE_NAME_LEN) :: mode_name
+    character(len=AERO_SOURCE_NAME_LEN) :: weight_class
     integer :: n_time, ncid
     character(len=NF90_MAX_NAME) :: check_name
     integer :: status, check_dim_size
@@ -757,10 +698,10 @@ contains
           ! somewhat difficult
           !write(mode_name,'(a,i2.2)') 'emit_mode_', i_mode
           scenario%aero_emission(i_time)%mode(i_mode)%name =  &
-               trim(source_name(source(i_mode)))
+               (source_name(source(i_mode)))
           ! Check to see if it is in aero_data
           dummy = aero_data_source_by_name(aero_data, &
-               source_name(source(i_mode)))
+               (source_name(source(i_mode))))
           ! FIXME: This should be from the netcdf file but we are always doing
           ! log-normal at least for now
           scenario%aero_emission(i_time)%mode(i_mode)%type = &
@@ -776,14 +717,14 @@ contains
           scenario%aero_emission(i_time)%mode(i_mode)%vol_frac_std = &
                vol_frac_std(1:20,i_mode,i_time)
           ! FIXME: Fix this source information
-          scenario%aero_emission(i_time)%mode(i_mode)%source = dummy !source(i_mode)
+          scenario%aero_emission(i_time)%mode(i_mode)%source = dummy
           if (char_radius(i_mode) < 0.01e-6) then
              write(weight_class,'(I3)') emission_weight_classes(i_mode)
           else
              write(weight_class,'(I3,a)') emission_weight_classes(i_mode), 'accumulation'
           end if
           scenario%aero_emission(i_time)%mode(i_mode)%weight_class = &
-               aero_data_weight_class_by_name(aero_data, trim(weight_class))
+               aero_data_weight_class_by_name(aero_data, (weight_class))
        end do
        ! Gases
        call gas_state_set_size(scenario%gas_emission(i_time), &
@@ -807,12 +748,26 @@ contains
 
   !> Read in aerosol and gas boundary conditions.
   subroutine init_read_in_bcs(grid, scenario, i, j, nz, aero_data, aero_state, &
-       gas_state, env_state, prefix, restart)
+       gas_state, env_state, prefix, restart, pmc_is, pmc_ie, pmc_js, pmc_je, &
+       pmc_ks, pmc_ke)
+
+    !> PartMC east-west start of domain.
+    integer, intent(in) :: pmc_is
+    !> PartMC east-west end of domain.
+    integer, intent(in) :: pmc_ie
+    !> PartMC north-south start of domain.
+    integer, intent(in) :: pmc_js
+    !> PartMC north-south end of domain.
+    integer, intent(in) :: pmc_je
+    !> PartMC top-bottom start of domain.
+    integer, intent(in) :: pmc_ks
+    !> PartMC top-bottom end of domain.
+    integer, intent(in) :: pmc_ke
 
     !> WRF domain.
     type(domain), intent(inout) :: grid
     !> Scenario data.
-    type(scenario_t), intent(inout) :: scenario(nz)
+    type(scenario_t), intent(inout) :: scenario(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !1,nz,1)
     !> East-west index of grid cell. 
     integer,intent(in) :: i
     !> North-south index of grid cell.
@@ -822,18 +777,20 @@ contains
     !> Aerosol data.
     type(aero_data_t), intent(inout) :: aero_data
     !> Aerosol state.
-    type(aero_state_t), intent(inout) :: aero_state(nz)
+    type(aero_state_t), intent(inout) :: aero_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !(1,nz,1)
     !> Gas state.
-    type(gas_state_t), intent(inout) :: gas_state(nz)
+    type(gas_state_t), intent(inout) :: gas_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !(1,nz,1)
     !> Environmental state.
-    type(env_state_t), intent(in) :: env_state(nz)
+    type(env_state_t), intent(in) :: env_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !(1,nz,1)
     !> File prefix.
     character(len=*), intent(in) :: prefix
     !> If this is a restart, we don't sample
     logical, intent(in) :: restart
 
     character(len=INPUT_FILE_PATH_NAME_LEN) :: file
-    character(len=AERO_MODE_NAME_LEN) :: mode_name, weight_class
+    character(len=AERO_MODE_NAME_LEN) :: mode_name
+    character(len=AERO_SOURCE_NAME_LEN) :: weight_class
+    character(len=AERO_SOURCE_NAME_LEN) :: source_name_tmp
     integer :: ncid
     character(len=NF90_MAX_NAME) :: check_name
     integer :: status, check_dim_size
@@ -892,55 +849,56 @@ contains
     call pmc_nc_read_real_4d(ncid, vol_frac_std, 'vol_frac_std', .true.)
 
     do k = 1,nz
-       if (allocated(scenario(k)%aero_background)) &
-            deallocate(scenario(k)%aero_background)
-       if (allocated(scenario(k)%aero_dilution_time)) &
-            deallocate(scenario(k)%aero_dilution_time)
-       if (allocated(scenario(k)%aero_dilution_rate)) &
-            deallocate(scenario(k)%aero_dilution_rate)
-       if (allocated(scenario(k)%gas_background)) &
-            deallocate(scenario(k)%gas_background)
-       if (allocated(scenario(k)%gas_dilution_time)) &
-            deallocate(scenario(k)%gas_dilution_time)
-       if (allocated(scenario(k)%gas_dilution_rate)) &
-            deallocate(scenario(k)%gas_dilution_rate)
+       if (allocated(scenario(i,k,j)%aero_background)) &
+            deallocate(scenario(i,k,j)%aero_background)
+       if (allocated(scenario(i,k,j)%aero_dilution_time)) &
+            deallocate(scenario(i,k,j)%aero_dilution_time)
+       if (allocated(scenario(i,k,j)%aero_dilution_rate)) &
+            deallocate(scenario(i,k,j)%aero_dilution_rate)
+       if (allocated(scenario(i,k,j)%gas_background)) &
+            deallocate(scenario(i,k,j)%gas_background)
+       if (allocated(scenario(i,k,j)%gas_dilution_time)) &
+            deallocate(scenario(i,k,j)%gas_dilution_time)
+       if (allocated(scenario(i,k,j)%gas_dilution_rate)) &
+            deallocate(scenario(i,k,j)%gas_dilution_rate)
 
-       allocate(scenario(k)%aero_background(n_times))
-       allocate(scenario(k)%aero_dilution_time(n_times))
-       allocate(scenario(k)%aero_dilution_rate(n_times))
+       allocate(scenario(i,k,j)%aero_background(n_times))
+       allocate(scenario(i,k,j)%aero_dilution_time(n_times))
+       allocate(scenario(i,k,j)%aero_dilution_rate(n_times))
 
        ! Gases are handled by WRF
-       allocate(scenario(k)%gas_background(n_times))
-       allocate(scenario(k)%gas_dilution_time(n_times))
-       allocate(scenario(k)%gas_dilution_rate(n_times))
+       allocate(scenario(i,k,j)%gas_background(n_times))
+       allocate(scenario(i,k,j)%gas_dilution_time(n_times))
+       allocate(scenario(i,k,j)%gas_dilution_rate(n_times))
 
        ! Loop to store the data
-       scenario(k)%aero_dilution_rate = aero_bc_rate_scale
-       scenario(k)%aero_dilution_time = aero_bc_time
+       scenario(i,k,j)%aero_dilution_rate = aero_bc_rate_scale
+       scenario(i,k,j)%aero_dilution_time = aero_bc_time
        do i_time = 1,n_times
-          allocate(scenario(k)%aero_background(i_time)%mode(n_modes))
+          allocate(scenario(i,k,j)%aero_background(i_time)%mode(n_modes))
           do i_mode = 1, n_modes
            write(mode_name,'(a,i2.2)') 'bc_mode_', i_mode
-           scenario(k)%aero_background(i_time)%mode(i_mode)%name = trim(mode_name)
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%name = mode_name
            ! Check to see if it is in aero_data
-           dummy = aero_data_source_by_name(aero_data, mode_name)
-           scenario(k)%aero_background(i_time)%mode(i_mode)%type = &
+           write(source_name_tmp, '(A,i2.2)') 'bc_mode_', i_mode
+           dummy = aero_data_source_by_name(aero_data, source_name_tmp)
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%type = &
                 mode_type(i_time,k,i_mode)
-           scenario(k)%aero_background(i_time)%mode(i_mode)%char_radius = &
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%char_radius = &
                 char_radius(i_time,k,i_mode)
-           scenario(k)%aero_background(i_time)%mode(i_mode)%log10_std_dev_radius = &
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%log10_std_dev_radius = &
                 log10_std_dev_radius(i_time,k,i_mode)
-           scenario(k)%aero_background(i_time)%mode(i_mode)%num_conc = &
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%num_conc = &
                 num_conc(i_time,k,i_mode)
-           scenario(k)%aero_background(i_time)%mode(i_mode)%vol_frac = &
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%vol_frac = &
                 vol_frac(i_time,k,i_mode,:)
-           scenario(k)%aero_background(i_time)%mode(i_mode)%vol_frac_std = &
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%vol_frac_std = &
                 vol_frac_std(i_time,k,i_mode,:)
            ! FIXME: Fix this source information
-           scenario(k)%aero_background(i_time)%mode(i_mode)%source = dummy !source(i_mode)
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%source = dummy !source(i_mode)
            write(weight_class,'(a,i3.3)') "BC", i_mode
-           scenario(k)%aero_background(i_time)%mode(i_mode)%weight_class = &
-                aero_data_weight_class_by_name(aero_data, trim(weight_class))
+           scenario(i,k,j)%aero_background(i_time)%mode(i_mode)%weight_class = &
+                aero_data_weight_class_by_name(aero_data, weight_class)
           end do
        end do
 
@@ -948,8 +906,8 @@ contains
        density = 1.0d0 / grid%alt(i,k,j)
 
        if (.not. restart) then
-          call aero_state_add_aero_dist_sample(aero_state(k), aero_data, &
-               scenario(k)%aero_background(1), density, 1.0d0, 0d0, &
+          call aero_state_add_aero_dist_sample(aero_state(i,k,j), aero_data, &
+               scenario(i,k,j)%aero_background(1), density, 1.0d0, 0d0, &
                grid%allow_doubling, grid%allow_halving, n_part_added)
        end if
 
@@ -970,15 +928,27 @@ contains
 
   !> Reads in aerosol and gas initial conditions for a grid cell.
   subroutine init_read_in_ics(grid, aero_state, gas_state, i, j, nz, aero_data, &
-       gas_data, env_state, prefix)
+       gas_data, env_state, prefix, pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ks, pmc_ke)
 
+    !> PartMC east-west start of domain.
+    integer, intent(in) :: pmc_is
+    !> PartMC east-west end of domain.
+    integer, intent(in) :: pmc_ie
+    !> PartMC north-south start of domain.
+    integer, intent(in) :: pmc_js
+    !> PartMC north-south end of domain.
+    integer, intent(in) :: pmc_je
+    !> PartMC top-bottom start of domain.
+    integer, intent(in) :: pmc_ks
+    !> PartMC top-bottom end of domain.
+    integer, intent(in) :: pmc_ke
     integer,intent(in) :: nz 
     !> WRF domain.
     type(domain), intent(in) :: grid
     !> Aerosol state.
-    type(aero_state_t), intent(inout) :: aero_state(nz)
+    type(aero_state_t), intent(inout) :: aero_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je) !1,nz,1)
     !> Gas state.
-    type(gas_state_t), intent(inout) :: gas_state(nz)
+    type(gas_state_t), intent(inout) :: gas_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je) !(1,nz,1)
     !> East-west index of grid cell.
     integer,intent(in) :: i
     !> North-south index of grid cell.
@@ -988,13 +958,13 @@ contains
     !> Gas data.
     type(gas_data_t), intent(inout) :: gas_data
     !> Environmental states.
-    type(env_state_t), intent(in) :: env_state(nz)
+    type(env_state_t), intent(in) :: env_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je) !(1,nz,1)
     !> Filename prefix.
     character(len=*), intent(in) :: prefix
 
     character(len=INPUT_FILE_PATH_NAME_LEN) :: file, group
     character(len=AERO_MODE_NAME_LEN) :: mode_name
-    character(len=AERO_SOURCE_NAME_LEN) :: weight_class
+    character(len=AERO_SOURCE_NAME_LEN) :: weight_class, source_name_tmp
     integer :: n_time, ncid
     character(len=NF90_MAX_NAME) :: check_name
     integer :: status, check_dim_size
@@ -1003,14 +973,13 @@ contains
     integer :: i_loop
     integer :: n_modes, n_aero_specs, n_gas_specs
     type(aero_dist_t) :: aero_dist_init
-    integer :: i_time, i_mode, k
+    integer :: i_time, i_mode, k, i_class
     integer :: dummy
     integer :: n_part_added
     real(kind=dp) :: density
     real(kind=dp), allocatable :: char_radius(:,:), vol_frac(:,:,:), &
          vol_frac_std(:,:,:), log10_std_dev_radius(:,:), num_conc(:,:)
     integer, allocatable :: mode_type(:,:), source(:,:)
-
 
     write(file, '(a,a,i3.3,a,i3.3,a)') trim(prefix),'_',i,'_',j,'.nc'
 
@@ -1041,26 +1010,27 @@ contains
           ! FIXME: We currently do not read in names
           ! We also ignore anything to do with source name or weight class.
           write(mode_name,'(a,i2.2)') 'ic_mode_', i_mode
-          aero_dist_init%mode(i_mode)%name = trim(mode_name)
-          dummy = aero_data_source_by_name(aero_data, mode_name)
+          aero_dist_init%mode(i_mode)%name = mode_name
+          write(source_name_tmp, '(a,i2.2)') 'ic_mode_', i_mode
+          dummy = aero_data_source_by_name(aero_data, source_name_tmp)
           aero_dist_init%mode(i_mode)%type = mode_type(k,i_mode)
           aero_dist_init%mode(i_mode)%char_radius = &
                char_radius(k,i_mode)
           aero_dist_init%mode(i_mode)%log10_std_dev_radius = &
                log10_std_dev_radius(k,i_mode)
-          aero_dist_init%mode(i_mode)%num_conc = &
+          aero_dist_init%mode(i_mode)%num_conc =&
                num_conc(k,i_mode)
           aero_dist_init%mode(i_mode)%vol_frac = &
                vol_frac(k,i_mode,1:n_aero_specs)
           aero_dist_init%mode(i_mode)%source = dummy
-          aero_dist_init%mode(i_mode)%vol_frac_std = vol_frac_std(k,i_mode,:)
+          aero_dist_init%mode(i_mode)%vol_frac_std = vol_frac_std(k,i_mode,1:n_aero_specs)
           write(weight_class,'(a,i3.3)') "IC", i_mode
           aero_dist_init%mode(i_mode)%weight_class = & 
-               aero_data_weight_class_by_name(aero_data, trim(weight_class))
+               aero_data_weight_class_by_name(aero_data, weight_class)
        end do
 
        density = 1.0d0 / grid%alt(i,k,j)
-       call aero_state_add_aero_dist_sample(aero_state(k), aero_data, &
+       call aero_state_add_aero_dist_sample(aero_state(i,k,j), aero_data, &
             aero_dist_init, density, 1.0d0, 0d0, grid%allow_doubling, &
             grid%allow_halving, n_part_added)
 
@@ -1318,6 +1288,7 @@ contains
     integer :: i_mode
     character(len=AERO_MODE_NAME_LEN) :: mode_name
     character(len=AERO_SOURCE_NAME_LEN) :: weight_class
+    character(len=AERO_SOURCE_NAME_LEN) :: source_name_tmp
     character(len=AERO_SOURCE_NAME_LEN), allocatable :: weight_name(:)
     integer :: num_ic_modes, num_bc_modes, num_emit_modes
     integer, allocatable, dimension(:) :: emission_weight_classes
@@ -1339,6 +1310,11 @@ contains
     do i_mode = 1,num_ic_modes
     write(weight_class,'(a,i3.3)') "IC", i_mode
     dummy = aero_data_weight_class_by_name(aero_data, weight_class)
+    print*, weight_class,dummy
+    end do
+    do i_ic = 1, num_ic_modes
+       write(source_name_tmp,'(a,i2.2)') 'ic_mode_', i_ic
+       dummy = aero_data_source_by_name(aero_data, source_name_tmp)
     end do
     call pmc_nc_check(nf90_close(ncid))
 
@@ -1355,6 +1331,11 @@ contains
        do i_mode = 1,num_bc_modes
           write(weight_class,'(a,i3.3)') "BC", i_mode
           dummy = aero_data_weight_class_by_name(aero_data, weight_class)
+          print*, weight_class,dummy
+       end do
+       do i_bc = 1, num_bc_modes
+          write(source_name_tmp,'(a,i2.2)') 'bc_mode_', i_bc
+          dummy = aero_data_source_by_name(aero_data, source_name_tmp)
        end do
        call pmc_nc_check(nf90_close(ncid))
     end if
@@ -1396,16 +1377,13 @@ contains
     call ensure_string_array_size(weight_name, num_emit_modes)
     do i_emit = 1,num_emit_modes
         write(weight_class,'(I3)') emission_weight_classes(i_emit)
-        weight_name(i_emit) = trim(weight_class)
+        weight_name(i_emit) = weight_class
     end do
 
-    do i_ic = 1, num_ic_modes
-       write(mode_name,'(a,i2.2)') 'ic_mode_', i_ic
-       dummy = aero_data_source_by_name(aero_data, mode_name)
-    end do
-    do i_source= 1, n_source
+    do i_source= 1,n_source
        dummy = aero_data_source_by_name(aero_data, source_name(i_source))
     end do
+
     do i_emit = 1,num_emit_modes
        dummy = aero_data_weight_class_by_name(aero_data, weight_name(i_emit))
     end do
@@ -1416,16 +1394,11 @@ contains
        dummy = aero_data_weight_class_by_name(aero_data, weight_class)
     end do
 
-    do i_bc = 1, num_bc_modes
-       write(mode_name,'(a,i2.2)') 'bc_mode_', i_bc
-       dummy = aero_data_source_by_name(aero_data, mode_name)
-    end do
-
     ! Added sea salt
     do i_ss = 1,2
-    write(mode_name,'(a,i2.2)') 'sea_salt_', i_ss
-    dummy = aero_data_weight_class_by_name(aero_data, mode_name)
-    dummy = aero_data_source_by_name(aero_data, mode_name)
+    write(source_name_tmp,'(a,i2.2)') 'sea_salt_', i_ss
+    dummy = aero_data_weight_class_by_name(aero_data, source_name_tmp) !mode_name)
+    dummy = aero_data_source_by_name(aero_data, source_name_tmp) !mode_name)
     end do
 
   end subroutine get_sources_and_weights
@@ -1569,7 +1542,8 @@ contains
     type(gas_data_t) :: input_gas_data
     type(aero_data_t) :: input_aero_data
     type(aero_data_t) :: global_aero_data
-    character(len=AERO_MODE_NAME_LEN) :: mode_name, weight_class
+    character(len=AERO_MODE_NAME_LEN) :: mode_name
+    character(len=AERO_SOURCE_NAME_LEN) :: weight_class
     integer :: n_ic, n_emit, i_ic, i_emit
     integer :: n_modes
 
@@ -1597,7 +1571,7 @@ contains
     real(kind=dp) :: gauss_weights(5)
     real(kind=dp) :: gauss_points(5)
     integer :: pmc_o3
-    integer :: n_class, i_spec
+    integer :: n_class, i_spec, i_class
    
     integer, parameter :: n_gas_emit = 17 
     integer, dimension(n_gas_emit) :: gas_index
@@ -1636,12 +1610,12 @@ contains
        call spec_file_close(sub_file)
 
        write(mode_name,'(a)') 'source_A'
-       dummy = aero_data_weight_class_by_name(input_aero_data, mode_name)
-       dummy = aero_data_source_by_name(input_aero_data, mode_name)
+       dummy = aero_data_weight_class_by_name(input_aero_data, (mode_name))
+       dummy = aero_data_source_by_name(input_aero_data, (mode_name))
        ! Define a second mode
        if (n_modes > 1) then
        write(mode_name,'(a)') 'source_B'
-       dummy = aero_data_weight_class_by_name(input_aero_data, mode_name)
+       dummy = aero_data_weight_class_by_name(input_aero_data, (mode_name))
        dummy = aero_data_source_by_name(input_aero_data, mode_name)
        end if
 
@@ -1725,6 +1699,8 @@ contains
 
     aero_data = input_aero_data
 
+    call aero_data_print(aero_data)
+
     n_parts = grid%num_particles
 
     call wrf_message('PartMC_init: Setting gas data for the WRF domain')
@@ -1759,8 +1735,8 @@ contains
     ! Recreate the aerosol distribution to sample
     write(mode_name,'(a)') 'source_A'
     i_mode = 1
-    aero_dist_init%mode(i_mode)%name = mode_name
-    dummy = aero_data_source_by_name(aero_data, mode_name)
+    aero_dist_init%mode(i_mode)%name = (mode_name)
+    dummy = aero_data_source_by_name(aero_data, (mode_name))
     aero_dist_init%mode(i_mode)%type = &
          AERO_MODE_TYPE_LOG_NORMAL
     aero_dist_init%mode(i_mode)%char_radius = 2d-8 
@@ -1774,13 +1750,13 @@ contains
     vol_frac_std = 0.0d0
     aero_dist_init%mode(i_mode)%vol_frac_std = vol_frac_std
     aero_dist_init%mode(i_mode)%weight_class = &
-         aero_data_weight_class_by_name(aero_data, mode_name)
+         aero_data_weight_class_by_name(aero_data, (mode_name))
 
     if (n_modes > 1) then
     write(mode_name,'(a)') 'source_B'
     i_mode = 2 
     aero_dist_init%mode(i_mode)%name = mode_name
-    dummy = aero_data_source_by_name(aero_data, mode_name)
+    dummy = aero_data_source_by_name(aero_data, (mode_name))
     aero_dist_init%mode(i_mode)%type = &
          AERO_MODE_TYPE_LOG_NORMAL
     aero_dist_init%mode(i_mode)%char_radius = 2d-8
@@ -1792,7 +1768,7 @@ contains
     vol_frac_std = 0.0d0
     aero_dist_init%mode(i_mode)%vol_frac_std = vol_frac_std
     aero_dist_init%mode(i_mode)%weight_class = &
-         aero_data_weight_class_by_name(aero_data, mode_name)
+         aero_data_weight_class_by_name(aero_data, (mode_name))
     end if
 
     gauss_points(1) = - (1.0/3) * sqrt(5 + 2*sqrt(10.0/7.0))
@@ -1848,7 +1824,7 @@ contains
 
        do i_spec = 1,n_gas_emit
           gas_index(i_spec) = gas_data_spec_by_name(gas_data, &
-               trim(gas_emit_names(i_spec)))
+               (gas_emit_names(i_spec)))
        end do
        r0 = 6.0d0
        x_center = real(global_nx,kind=dp) / 2 !50.0d0
@@ -2159,5 +2135,65 @@ contains
   end subroutine init_wrf_partmc_idealized
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> Prints out aerosol data.
+  subroutine aero_data_print(aero_data)
+    !> Aerosol data.
+    type(aero_data_t), intent(in) :: aero_data
+
+    integer :: i
+
+    if (allocated(aero_data%name)) then
+       print *, 'Species names:'
+       do i = 1, size(aero_data%name)
+          print *, '  ', trim(aero_data%name(i))
+       end do
+    end if
+
+    if (allocated(aero_data%density)) then
+       print *, 'Densities (kg/m^3):'
+       do i = 1, size(aero_data%density)
+          print *, '  ', aero_data%density(i)
+       end do
+    end if
+
+    if (allocated(aero_data%num_ions)) then
+       print *, 'Number of ions:'
+       do i = 1, size(aero_data%num_ions)
+          print *, '  ', aero_data%num_ions(i)
+       end do
+    end if
+
+    if (allocated(aero_data%molec_weight)) then
+       print *, 'Molecular weights (kg/mol):'
+       do i = 1, size(aero_data%molec_weight)
+          print *, '  ', aero_data%molec_weight(i)
+       end do
+    end if
+
+    if (allocated(aero_data%kappa)) then
+       print *, 'Kappa values:'
+       do i = 1, size(aero_data%kappa)
+          print *, '  ', aero_data%kappa(i)
+       end do
+    end if
+
+    if (allocated(aero_data%source_name)) then
+       print *, 'Source names:'
+       do i = 1, size(aero_data%source_name)
+          print *, '  ', trim(aero_data%source_name(i))
+       end do
+    end if
+
+    if (allocated(aero_data%weight_class_name)) then
+       print *, 'Weight class names:'
+       do i = 1, size(aero_data%weight_class_name)
+          print *, '  ', trim(aero_data%weight_class_name(i))
+       end do
+    end if
+
+  end subroutine aero_data_print
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module wrf_pmc_init

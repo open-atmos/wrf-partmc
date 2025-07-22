@@ -777,11 +777,11 @@ contains
     !> Aerosol data.
     type(aero_data_t), intent(inout) :: aero_data
     !> Aerosol state.
-    type(aero_state_t), intent(inout) :: aero_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !(1,nz,1)
+    type(aero_state_t), intent(inout) :: aero_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je)
     !> Gas state.
-    type(gas_state_t), intent(inout) :: gas_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !(1,nz,1)
+    type(gas_state_t), intent(inout) :: gas_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je)
     !> Environmental state.
-    type(env_state_t), intent(in) :: env_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !(1,nz,1)
+    type(env_state_t), intent(in) :: env_state(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je)
     !> File prefix.
     character(len=*), intent(in) :: prefix
     !> If this is a restart, we don't sample
@@ -946,9 +946,9 @@ contains
     !> WRF domain.
     type(domain), intent(in) :: grid
     !> Aerosol state.
-    type(aero_state_t), intent(inout) :: aero_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je) !1,nz,1)
+    type(aero_state_t), intent(inout) :: aero_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je)
     !> Gas state.
-    type(gas_state_t), intent(inout) :: gas_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je) !(1,nz,1)
+    type(gas_state_t), intent(inout) :: gas_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je)
     !> East-west index of grid cell.
     integer,intent(in) :: i
     !> North-south index of grid cell.
@@ -958,7 +958,7 @@ contains
     !> Gas data.
     type(gas_data_t), intent(inout) :: gas_data
     !> Environmental states.
-    type(env_state_t), intent(in) :: env_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je) !(1,nz,1)
+    type(env_state_t), intent(in) :: env_state(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je)
     !> Filename prefix.
     character(len=*), intent(in) :: prefix
 
@@ -1308,9 +1308,8 @@ contains
          check_name, check_dim_size))
     num_ic_modes = check_dim_size
     do i_mode = 1,num_ic_modes
-    write(weight_class,'(a,i3.3)') "IC", i_mode
-    dummy = aero_data_weight_class_by_name(aero_data, weight_class)
-    print*, weight_class,dummy
+       write(weight_class,'(a,i3.3)') "IC", i_mode
+       dummy = aero_data_weight_class_by_name(aero_data, weight_class)
     end do
     do i_ic = 1, num_ic_modes
        write(source_name_tmp,'(a,i2.2)') 'ic_mode_', i_ic
@@ -1331,7 +1330,6 @@ contains
        do i_mode = 1,num_bc_modes
           write(weight_class,'(a,i3.3)') "BC", i_mode
           dummy = aero_data_weight_class_by_name(aero_data, weight_class)
-          print*, weight_class,dummy
        end do
        do i_bc = 1, num_bc_modes
           write(source_name_tmp,'(a,i2.2)') 'bc_mode_', i_bc
@@ -1389,6 +1387,7 @@ contains
     end do
 
     ! Hack to add another weight class for now
+    ! TODO: This assumption may changed as more modes are added per source.
     do i_emit = 1,num_emit_modes
        write(weight_class,'(I3,a)') emission_weight_classes(i_emit), 'accumulation'
        dummy = aero_data_weight_class_by_name(aero_data, weight_class)
@@ -1396,9 +1395,9 @@ contains
 
     ! Added sea salt
     do i_ss = 1,2
-    write(source_name_tmp,'(a,i2.2)') 'sea_salt_', i_ss
-    dummy = aero_data_weight_class_by_name(aero_data, source_name_tmp) !mode_name)
-    dummy = aero_data_source_by_name(aero_data, source_name_tmp) !mode_name)
+       write(source_name_tmp,'(a,i2.2)') 'sea_salt_', i_ss
+       dummy = aero_data_weight_class_by_name(aero_data, source_name_tmp)
+       dummy = aero_data_source_by_name(aero_data, source_name_tmp)
     end do
 
   end subroutine get_sources_and_weights
@@ -1711,10 +1710,6 @@ contains
 
     call wrf_message('PartMC_init: Setting initial aerosol and gas states for &
          WRF domain')
-
-    !write(mode_name,'(a)') 'sea_salt'
-    !dummy = aero_data_weight_class_by_name(aero_data, mode_name)
-    !dummy = aero_data_source_by_name(aero_data, mode_name)
 
     do j = pmc_js, pmc_je
     do k = pmc_ks, pmc_ke
@@ -2057,7 +2052,6 @@ contains
                 scenario(i,k,j)%aero_background(1)%mode(2)%num_conc = q_value / 8.0
              end if
           end if
-
 
           grid%chem_bxs(1,1,1,1) = 1.0d0
        end do

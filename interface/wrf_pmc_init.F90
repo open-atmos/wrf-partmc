@@ -69,12 +69,12 @@ contains
     type(env_state_t), dimension(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je), &
          intent(inout) :: env_states
     !> Aerosol data.
-    type(aero_data_t), intent(inout) :: aero_data 
+    type(aero_data_t), intent(inout) :: aero_data
     !> Aerosol states.
     type(aero_state_t), dimension(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je), &
          intent(inout):: aero_states
     !> Gas data.
-    type(gas_data_t), intent(inout) :: gas_data 
+    type(gas_data_t), intent(inout) :: gas_data
     !> Gas states.
     type(gas_state_t), dimension(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je), &
          intent(inout) :: gas_states
@@ -507,7 +507,7 @@ contains
     type(aero_state_t), dimension(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je), &
          intent(inout) :: aero_states
     !> Gas data.
-    type(gas_data_t), intent(inout) :: gas_data 
+    type(gas_data_t), intent(inout) :: gas_data
     !> Gas states.
     type(gas_state_t), dimension(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je), &
          intent(inout) :: gas_states
@@ -610,13 +610,13 @@ contains
             check_dim_size))
     n_modes = check_dim_size
     status = nf90_inq_dimid(ncid, "n_aero_specs", dimid_n_aero_specs)
-    call pmc_nc_check(nf90_Inquire_Dimension(ncid, dimid_n_aero_specs, & 
+    call pmc_nc_check(nf90_Inquire_Dimension(ncid, dimid_n_aero_specs, &
          check_name, check_dim_size))
     n_aero_specs = check_dim_size
 
     !print*, 'number of modes =', n_modes, 'number of specs = ', n_aero_specs, &
-    !     'number of times = ', n_time 
- 
+    !     'number of times = ', n_time
+
     ! We've currently just kept the number of modes constant for all
     ! time for a cell and for all cells. This is why there isn't a time
     ! dependence for each grid cell for the following:
@@ -768,7 +768,7 @@ contains
     type(domain), intent(inout) :: grid
     !> Scenario data.
     type(scenario_t), intent(inout) :: scenario(pmc_is:pmc_ie,pmc_ks:pmc_ke, pmc_js:pmc_je) !1,nz,1)
-    !> East-west index of grid cell. 
+    !> East-west index of grid cell.
     integer,intent(in) :: i
     !> North-south index of grid cell.
     integer,intent(in) :: j
@@ -942,7 +942,8 @@ contains
     integer, intent(in) :: pmc_ks
     !> PartMC top-bottom end of domain.
     integer, intent(in) :: pmc_ke
-    integer,intent(in) :: nz 
+    !> Number of vertical levels.
+    integer,intent(in) :: nz
     !> WRF domain.
     type(domain), intent(in) :: grid
     !> Aerosol state.
@@ -1025,7 +1026,7 @@ contains
           aero_dist_init%mode(i_mode)%source = dummy
           aero_dist_init%mode(i_mode)%vol_frac_std = vol_frac_std(k,i_mode,1:n_aero_specs)
           write(weight_class,'(a,i3.3)') "IC", i_mode
-          aero_dist_init%mode(i_mode)%weight_class = & 
+          aero_dist_init%mode(i_mode)%weight_class = &
                aero_data_weight_class_by_name(aero_data, weight_class)
        end do
 
@@ -1125,7 +1126,7 @@ contains
     call pmc_nc_read_real_2d(ncid, aero_particle_mass, &
          "aero_particle_mass")
     call pmc_nc_read_integer_1d(ncid, aero_component_len, &
-         "aero_component_len") 
+         "aero_component_len")
     call pmc_nc_read_integer_1d(ncid, aero_component_start_ind, &
          "aero_component_start_ind")
     call pmc_nc_read_integer_1d(ncid, aero_component_particle_num, &
@@ -1270,7 +1271,7 @@ contains
     !> File prefix of emissions.
     character(len=*), intent(in) :: prefix_emissions
     !> Whether or not boundary conditions are periodic.
-    logical, intent(in) :: periodic_bcs 
+    logical, intent(in) :: periodic_bcs
 
     integer :: ncid
     integer :: status
@@ -1571,13 +1572,13 @@ contains
     real(kind=dp) :: gauss_points(5)
     integer :: pmc_o3
     integer :: n_class, i_spec, i_class
-   
-    integer, parameter :: n_gas_emit = 17 
+
+    integer, parameter :: n_gas_emit = 17
     integer, dimension(n_gas_emit) :: gas_index
     character(len=5), dimension(n_gas_emit) :: gas_emit_names = &
         (/ "SO2  ", "NO2  ", "NO   ", "NH3  ", "CO   ", "ALD2 ", &
            "HCHO ", "ETH  ", "OLEI ", "OLET ", "TOL  ", "XYL  ", &
-           "AONE ", "PAR  ", "ISOP ", "CH3OH", "ANOL "/) 
+           "AONE ", "PAR  ", "ISOP ", "CH3OH", "ANOL "/)
     real(kind=dp), dimension(n_gas_emit), parameter :: gas_emit_values = &
         (/4d-9, 3d-9, 6d-8, 9d-9, 8d-7, 2d-9, &
           4d-9, 2d-8, 6d-9, 6d-9, 6d-9, 6d-9, &
@@ -1734,8 +1735,8 @@ contains
     dummy = aero_data_source_by_name(aero_data, (mode_name))
     aero_dist_init%mode(i_mode)%type = &
          AERO_MODE_TYPE_LOG_NORMAL
-    aero_dist_init%mode(i_mode)%char_radius = 2d-8 
-    aero_dist_init%mode(i_mode)%log10_std_dev_radius = 0.25 
+    aero_dist_init%mode(i_mode)%char_radius = 2d-8
+    aero_dist_init%mode(i_mode)%log10_std_dev_radius = 0.25
     allocate(vol_frac(aero_data_n_spec(aero_data)))
     vol_frac = 0.0d0
     vol_frac(1) = 1.0d0
@@ -1749,7 +1750,7 @@ contains
 
     if (n_modes > 1) then
     write(mode_name,'(a)') 'source_B'
-    i_mode = 2 
+    i_mode = 2
     aero_dist_init%mode(i_mode)%name = mode_name
     dummy = aero_data_source_by_name(aero_data, (mode_name))
     aero_dist_init%mode(i_mode)%type = &
@@ -1868,7 +1869,7 @@ contains
              endif
           end do
 
-          call aero_state_add_aero_dist_sample(aero_states(i,k,j), & 
+          call aero_state_add_aero_dist_sample(aero_states(i,k,j), &
                aero_data, aero_dist_init, 1.0/real(grid%alt(i,k,j),kind=dp), 1.0d0, &
                 0d0, .true., .true.)
           if (i == 1 .or. i == global_nx .or. j == 1 .or. j == global_ny) then
@@ -1884,7 +1885,7 @@ contains
              do i_mode = 1,n_modes
                 scenario(i,k,j)%aero_background(1)%mode(i_mode) = &
                      aero_dist_init%mode(i_mode)
-             end do 
+             end do
           end if
 
           if (grid%do_emission) then
@@ -1898,7 +1899,7 @@ contains
              end if
              scenario(i,k,j)%gas_emission(1)%mix_rat = 0.0d0
              do i_spec = 1,n_gas_emit
-                scenario(i,k,j)%gas_emission(1)%mix_rat(gas_index(i_spec)) = gas_emit_values(i_spec) 
+                scenario(i,k,j)%gas_emission(1)%mix_rat(gas_index(i_spec)) = gas_emit_values(i_spec)
              end do
           end if
        end do
@@ -2061,7 +2062,7 @@ contains
        ! If we are a restart
        if (config_flags%do_restart) then
           do j = pmc_js,pmc_je
-          do i = pmc_is,pmc_ie 
+          do i = pmc_is,pmc_ie
              call init_read_in_restart(aero_states(i,:,j), gas_states(i,:,j), i, j, &
                   pmc_ke, aero_data, gas_data, config_flags%partmc_restart_prefix, &
                   config_flags%partmc_restart_index)
@@ -2113,7 +2114,7 @@ contains
     print*, 'timing initialization - ICs:', time_ic, 'BCs:', time_bc
 
     ! FIXME: We are not being consistent in the passing of information
-    ! partmc_from_wrf is needed if WRF has set the gases with its own init 
+    ! partmc_from_wrf is needed if WRF has set the gases with its own init
     ! routines. This is the case with uniform and rotational.
     ! For real cases, the input is still handled by PartMC files for both
     ! the aerosols and gases from the ic/bc files.

@@ -4359,7 +4359,7 @@ SUBROUTINE advect_scalar   ( field, field_old, tendency,    &
 
   ENDDO
 
-   ELSE IF ( horz_order == 0 ) THEN
+   ELSE IF (vert_order == 0 ) THEN
 
       ! Just in case we want to turn vertical advection off, we can do it
 
@@ -6067,10 +6067,6 @@ ELSE IF (horz_order == 2 ) THEN
      ENDDO
 
   ENDDO
-
-   ELSE IF ( horz_order == 0 ) THEN
-
-      ! Just in case we want to turn horizontal advection off, we can do it
 
    ELSE
 

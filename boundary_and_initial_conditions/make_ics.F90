@@ -236,12 +236,13 @@ contains
           log10_std_dev_radius(k,i_mode) = dlog10(mode_std(i_mode))
           total_num_conc = 0.0d0
           do i_spec = 1,num_aero_species
-             total_num_conc = total_num_conc + get_num_conc( &
+             total_num_conc = total_num_conc + num_conc_from_mass( &
                   values(i_mode,i_spec,k), mode_diams(i_mode), &
                   mode_std(i_mode), aero_data%density(i_spec))
           end do
           num_conc(k,i_mode) =  total_num_conc
           vol_frac(k,i_mode,:) = values(i_mode,:,k) / aero_data%density
+          vol_frac(k,i_mode,:) = vol_frac(k,i_mode,:) / sum(vol_frac(k,i_mode,:))
           vol_frac_std(k,i_mode,:) = 0.0d0
           source(k,i_mode) = mode_source(i_mode)
        end do

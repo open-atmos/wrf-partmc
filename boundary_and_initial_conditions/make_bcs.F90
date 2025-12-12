@@ -15,7 +15,7 @@ program make_bcs
   !> Filename of NetCDF file to open.
   character(len=100) :: filename_bc, filename_ic
   !> NetCDF file ID, in data mode.
-  integer :: ncid_bc, ncid_ic
+  integer :: ncid_bc
 
   character(len=100), allocatable, dimension(:) :: aero_mode_name
   real(kind=dp), allocatable, dimension(:,:,:,:,:) :: mass_conc
@@ -37,12 +37,13 @@ program make_bcs
   real(kind=dp), allocatable, dimension(:) :: mode_diams, mode_std
   integer, allocatable, dimension(:) :: mode_source
   real(kind=dp), allocatable, dimension(:,:) :: mode_vol_fracs
-  character(len=100) :: suffix
+  character(len=100), parameter :: suffix = '.nc'
   integer :: ncid
   type(spec_file_t) :: sub_file
   character(len=300) :: file_path, filename, file_prefix, command
   character(len=300) :: output_file_path, output_file_prefix
   integer :: ks, ke, n_proc, rem_x, rem_y
+  integer :: dimid
 
   call pmc_mpi_init()
 
@@ -75,26 +76,21 @@ program make_bcs
   call spec_file_read_aero_data(sub_file, aero_data)
           call spec_file_close(sub_file)
 
-  suffix = '.nc'
   write(filename_bc,'(A,A)') trim(file_path),"wrfbdy_d01"
   call pmc_nc_check(nf90_open(filename_bc, NF90_NOWRITE, ncid_bc))
-  ! What is our grid - we should get this from the netcdf file
-  write(filename_ic,'(A,A)') trim(file_path),"wrfbdy_d01"
-  call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
-  status = nf90_get_att(ncid_ic,NF90_GLOBAL,"WEST-EAST_GRID_DIMENSION",ie)
-  call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
-  status = nf90_get_att(ncid_ic,NF90_GLOBAL,"SOUTH-NORTH_GRID_DIMENSION",je)
-  call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
-  status = nf90_get_att(ncid_ic,NF90_GLOBAL,"BOTTOM-TOP_GRID_DIMENSION",nz)
+  status = nf90_get_att(ncid_bc, NF90_GLOBAL, "WEST-EAST_GRID_DIMENSION", ie)
+  status = nf90_get_att(ncid_bc, NF90_GLOBAL, "SOUTH-NORTH_GRID_DIMENSION", je)
+  status = nf90_get_att(ncid_bc, NF90_GLOBAL, "BOTTOM-TOP_GRID_DIMENSION", nz)
+  call pmc_nc_check(nf90_inq_dimid(ncid_bc, "Time", dimid))
+  status = nf90_inquire_dimension(ncid_bc, dimid, len=nt)
 
-  is = 1 
-  ie = ie - 1 
-  nx = ie - is + 1 
-  js = 1 
+  is = 1
+  ie = ie - 1
+  nx = ie - is + 1
+  js = 1
   je = je - 1
-  ny = je - js + 1 
-  nz = nz - 1 
-  nt = 8
+  ny = je - js + 1
+  nz = nz - 1
   ks = 1
   ke = nz - 1
   n_proc = pmc_mpi_size()
@@ -198,32 +194,6 @@ program make_bcs
   call pmc_mpi_finalize()
  
 contains
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Compute a number concentration based off a log-normal distribution with
-  !! a given diameter and standard deviation
-  real(kind=dp) function get_num_conc(mass, diam, std, density)
-
-    !> Total mass.
-    real(kind=dp) :: mass
-    !> Median diamter
-    real(kind=dp) :: diam
-    !> Standard deviation.
-    real(kind=dp) :: std
-    !>
-    real(kind=dp) :: density
-
-    integer :: k
-    real(kind=dp) :: tmp
-    real(kind=dp) :: Dmax, Dmin
-
-    k = 3
-    tmp = density*(const%pi/ 6.0d0)*diam**3.0 * exp(k**2.0d0 / 2.0d0 &
-         * log(std)**2.0d0)
-    get_num_conc = mass / tmp
-
-  end function get_num_conc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

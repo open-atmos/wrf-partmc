@@ -367,12 +367,17 @@ contains
 
     mass_conc = 0.0d0
 
+    ! Check the boundary
+    status = NF90_INQ_DIMID(ncid, 'bdy_width', dimid)
+    status = nf90_inquire_dimension(ncid, dimid, len = bdy_width)
+    call warn_assert_msg(482917356, bdy_width == 1, &
+         "WRF-PartMC only supports bdywidth = 1 currently")
+
+    ! Depending on what boundary we are on, access the right part of the array 
     if (boundary(3:) .eq. "S") then
-       status = NF90_INQ_DIMID(ncid, 'bdy_width', dimid)
-       status = nf90_inquire_dimension(ncid, dimid, len = bdy_width)
-       ind = 1
+       ind = 1 
     else
-       ind = 1
+       ind = bdy_width 
     end if
 
     do i_mode = 1,num_mode_mam3

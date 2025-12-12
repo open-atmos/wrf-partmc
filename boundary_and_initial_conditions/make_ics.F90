@@ -71,7 +71,6 @@ program make_ics
   call spec_file_read_aero_data(sub_file, aero_data)
   call spec_file_close(sub_file)
 
-  ! What is our grid - we should get this from the netcdf file
   write(filename_ic,'(A,A)') trim(file_path), "wrfinput_d01"
   call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
   status = nf90_get_att(ncid_ic,NF90_GLOBAL,"WEST-EAST_GRID_DIMENSION",ie)
@@ -125,36 +124,6 @@ program make_ics
   call pmc_mpi_finalize()
  
 contains
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Compute a number concentration based off a log-normal distribution with
-  !! a given diameter and standard deviation
-  real(kind=dp) function get_num_conc(mass, diam, std, species_density)
-
-    !> Total mass.
-    real(kind=dp) :: mass
-    !> Median diamter
-    real(kind=dp) :: diam
-    !> Standard deviation.
-    real(kind=dp) :: std
-    !> Density of aerosol species.
-    real(kind=dp) :: species_density
-
-    real(kind=dp) :: tmp
-
-    tmp = (species_density*const%pi/ 6.0d0)*diam**3.0 * exp(4.5d0 &
-         * log(std)**2.0d0)
-
-    get_num_conc = mass / tmp
-
-    ! Fraction of the number concentration that is within the MOSAIC size range
-    !tmp = .5 * (erf(log(Dmax / diam) / (sqrt(2.0d0) * log (std))) - &
-    !     erf(log(Dmin / diam) / (sqrt(2.0d0)*log(std))))
-    !print*, diam, tmp
-    !get_num_conc = get_num_conc / tmp
-
-  end function get_num_conc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

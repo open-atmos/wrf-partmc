@@ -929,33 +929,29 @@ contains
     real(kind=dp), dimension(5) :: factor 
 
     integer :: i
-
     integer :: spec_index
     real(kind=dp) :: tot_vol_frac
+    ! Map of PartMC species names to SMOKE aerosol species names.
     character(len=100), parameter, dimension(5) :: &
         smoke_pmc_aero_species_name = ["OIN", "SO4", "NO3", "OC ", "BC "]
 
 
     if (allocated(vol_frac)) deallocate(vol_frac)
-    !if (allocated(vol_frac_std)) deallocate(vol_frac_std)
     allocate(vol_frac(n_specs))
-    !allocate(vol_frac_std(n_specs))
     vol_frac = 0.0d0
 
     if (sum(species) > 0.0d0) then
        do i = 1, size(species)
           spec_index = aero_data_spec_by_name(aero_data, &
                smoke_pmc_aero_species_name(i))
+          if (spec_index <= 0) cycle
           if (factor(i) > 0.0d0) then
              vol_frac(spec_index) = factor(i)*species(i)
           end if
        end do
        vol_frac = vol_frac / aero_data%density
        tot_vol_frac = sum(vol_frac)
-
-       ! convert mass fractions to volume fractions
        vol_frac = vol_frac / tot_vol_frac
-       !vol_frac_std = vol_frac_std / aero_data%density
    else ! There isn't anything for this mode so set a dummy value
        vol_frac = 1.0d0
        vol_frac = vol_frac / sum(vol_frac)

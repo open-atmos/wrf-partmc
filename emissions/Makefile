@@ -38,7 +38,9 @@ JSONF_INCLUDES := $(JSON_FORTRAN_HOME)/include
 
 MOSAIC_LIB := ../mosaic/libmosaic.a
 
-LIBS := $(NFLIBS) $(NCLIBS) $(MOSAIC_LIB) $(GSL_LIBS) -L$(JSONF_LIBS)
+RPATH := -Wl,-rpath,$(JSON_FORTRAN_HOME)/lib
+
+LIBS := $(NFLIBS) $(NCLIBS) $(MOSAIC_LIB) $(GSL_LIBS) -L$(JSONF_LIBS) $(RPATH)
 INC := -I$(NCINCLUDES) -I../partmc/src -I$(GSL_HOME)/include -I$(NFINCLUDES) -I$(JSONF_INCLUDES)
 FFLAGS_DEBUG := -g -fimplicit-none -W -Wall -Wconversion -Wunderflow -Wno-unused -fbounds-check
 FFLAGS := -O3 $(NFFLAGS)

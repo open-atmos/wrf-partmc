@@ -71,7 +71,6 @@ program make_ics
   call spec_file_read_aero_data(sub_file, aero_data)
   call spec_file_close(sub_file)
 
-  ! What is our grid - we should get this from the netcdf file
   write(filename_ic,'(A,A)') trim(file_path), "wrfinput_d01"
   call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
   status = nf90_get_att(ncid_ic,NF90_GLOBAL,"WEST-EAST_GRID_DIMENSION",ie)
@@ -125,36 +124,6 @@ program make_ics
   call pmc_mpi_finalize()
  
 contains
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Compute a number concentration based off a log-normal distribution with
-  !! a given diameter and standard deviation
-  real(kind=dp) function get_num_conc(mass, diam, std, species_density)
-
-    !> Total mass.
-    real(kind=dp) :: mass
-    !> Median diamter
-    real(kind=dp) :: diam
-    !> Standard deviation.
-    real(kind=dp) :: std
-    !> Density of aerosol species.
-    real(kind=dp) :: species_density
-
-    real(kind=dp) :: tmp
-
-    tmp = (species_density*const%pi/ 6.0d0)*diam**3.0 * exp(4.5d0 &
-         * log(std)**2.0d0)
-
-    get_num_conc = mass / tmp
-
-    ! Fraction of the number concentration that is within the MOSAIC size range
-    !tmp = .5 * (erf(log(Dmax / diam) / (sqrt(2.0d0) * log (std))) - &
-    !     erf(log(Dmin / diam) / (sqrt(2.0d0)*log(std))))
-    !print*, diam, tmp
-    !get_num_conc = get_num_conc / tmp
-
-  end function get_num_conc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -236,12 +205,13 @@ contains
           log10_std_dev_radius(k,i_mode) = dlog10(mode_std(i_mode))
           total_num_conc = 0.0d0
           do i_spec = 1,num_aero_species
-             total_num_conc = total_num_conc + get_num_conc( &
+             total_num_conc = total_num_conc + num_conc_from_mass( &
                   values(i_mode,i_spec,k), mode_diams(i_mode), &
                   mode_std(i_mode), aero_data%density(i_spec))
           end do
           num_conc(k,i_mode) =  total_num_conc
           vol_frac(k,i_mode,:) = values(i_mode,:,k) / aero_data%density
+          vol_frac(k,i_mode,:) = vol_frac(k,i_mode,:) / sum(vol_frac(k,i_mode,:))
           vol_frac_std(k,i_mode,:) = 0.0d0
           source(k,i_mode) = mode_source(i_mode)
        end do

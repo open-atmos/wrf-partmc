@@ -3,6 +3,7 @@ module ic_bc_helper
   use pmc_netcdf
   use pmc_mpi
   use pmc_aero_data
+  use pmc_constants
 
   integer, parameter :: num_mode_mam3 = 3
   ! Map MAM3 modes to PartMC modes
@@ -143,6 +144,36 @@ contains
     mode_vol_fracs = 0.0d0
 
   end subroutine get_mode_parameters
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> Compute a number concentration based off a log-normal distribution with
+  !! a given diameter and standard deviation
+  real(kind=dp) function num_conc_from_mass(mass, diam, std, species_density)
+
+    !> Total mass.
+    real(kind=dp) :: mass
+    !> Median diamter
+    real(kind=dp) :: diam
+    !> Standard deviation.
+    real(kind=dp) :: std
+    !> Density of aerosol species.
+    real(kind=dp) :: species_density
+
+    real(kind=dp) :: tmp
+
+    tmp = (species_density*const%pi/ 6.0d0)*diam**3.0 * exp(4.5d0 &
+         * log(std)**2.0d0)
+
+    num_conc_from_mass = mass / tmp
+
+    ! Fraction of the number concentration that is within the MOSAIC size range
+    !tmp = .5 * (erf(log(Dmax / diam) / (sqrt(2.0d0) * log (std))) - &
+    !     erf(log(Dmin / diam) / (sqrt(2.0d0)*log(std))))
+    !print*, diam, tmp
+    !get_num_conc = get_num_conc / tmp
+
+  end function num_conc_from_mass
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

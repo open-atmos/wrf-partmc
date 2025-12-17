@@ -15,7 +15,7 @@ program make_bcs
   !> Filename of NetCDF file to open.
   character(len=100) :: filename_bc, filename_ic
   !> NetCDF file ID, in data mode.
-  integer :: ncid_bc, ncid_ic
+  integer :: ncid_bc
 
   character(len=100), allocatable, dimension(:) :: aero_mode_name
   real(kind=dp), allocatable, dimension(:,:,:,:,:) :: mass_conc
@@ -37,12 +37,13 @@ program make_bcs
   real(kind=dp), allocatable, dimension(:) :: mode_diams, mode_std
   integer, allocatable, dimension(:) :: mode_source
   real(kind=dp), allocatable, dimension(:,:) :: mode_vol_fracs
-  character(len=100) :: suffix
+  character(len=100), parameter :: suffix = '.nc'
   integer :: ncid
   type(spec_file_t) :: sub_file
   character(len=300) :: file_path, filename, file_prefix, command
   character(len=300) :: output_file_path, output_file_prefix
   integer :: ks, ke, n_proc, rem_x, rem_y
+  integer :: dimid
 
   call pmc_mpi_init()
 
@@ -75,26 +76,21 @@ program make_bcs
   call spec_file_read_aero_data(sub_file, aero_data)
           call spec_file_close(sub_file)
 
-  suffix = '.nc'
   write(filename_bc,'(A,A)') trim(file_path),"wrfbdy_d01"
   call pmc_nc_check(nf90_open(filename_bc, NF90_NOWRITE, ncid_bc))
-  ! What is our grid - we should get this from the netcdf file
-  write(filename_ic,'(A,A)') trim(file_path),"wrfbdy_d01"
-  call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
-  status = nf90_get_att(ncid_ic,NF90_GLOBAL,"WEST-EAST_GRID_DIMENSION",ie)
-  call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
-  status = nf90_get_att(ncid_ic,NF90_GLOBAL,"SOUTH-NORTH_GRID_DIMENSION",je)
-  call pmc_nc_check(nf90_open(filename_ic, NF90_NOWRITE, ncid_ic))
-  status = nf90_get_att(ncid_ic,NF90_GLOBAL,"BOTTOM-TOP_GRID_DIMENSION",nz)
+  status = nf90_get_att(ncid_bc, NF90_GLOBAL, "WEST-EAST_GRID_DIMENSION", ie)
+  status = nf90_get_att(ncid_bc, NF90_GLOBAL, "SOUTH-NORTH_GRID_DIMENSION", je)
+  status = nf90_get_att(ncid_bc, NF90_GLOBAL, "BOTTOM-TOP_GRID_DIMENSION", nz)
+  call pmc_nc_check(nf90_inq_dimid(ncid_bc, "Time", dimid))
+  status = nf90_inquire_dimension(ncid_bc, dimid, len=nt)
 
-  is = 1 
-  ie = ie - 1 
-  nx = ie - is + 1 
-  js = 1 
+  is = 1
+  ie = ie - 1
+  nx = ie - is + 1
+  js = 1
   je = je - 1
-  ny = je - js + 1 
-  nz = nz - 1 
-  nt = 8
+  ny = je - js + 1
+  nz = nz - 1
   ks = 1
   ke = nz - 1
   n_proc = pmc_mpi_size()
@@ -201,32 +197,6 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Compute a number concentration based off a log-normal distribution with
-  !! a given diameter and standard deviation
-  real(kind=dp) function get_num_conc(mass, diam, std, density)
-
-    !> Total mass.
-    real(kind=dp) :: mass
-    !> Median diamter
-    real(kind=dp) :: diam
-    !> Standard deviation.
-    real(kind=dp) :: std
-    !>
-    real(kind=dp) :: density
-
-    integer :: k
-    real(kind=dp) :: tmp
-    real(kind=dp) :: Dmax, Dmin
-
-    k = 3
-    tmp = density*(const%pi/ 6.0d0)*diam**3.0 * exp(k**2.0d0 / 2.0d0 &
-         * log(std)**2.0d0)
-    get_num_conc = mass / tmp
-
-  end function get_num_conc
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
   !> Creates a boundary condition NetCDF for a given grid cell.
   subroutine create_bcs(i, j, nz, aero_data, num_modes, values, &
        num_aero_species, num_times, mode_diams, mode_std,  mode_vol_fracs, &
@@ -300,13 +270,13 @@ contains
        log10_std_dev_radius(i_time,k,i_mode) = dlog10(mode_std(i_mode))
        total_num_conc = 0.0d0
        do i_spec = 1,num_aero_species
-         total_num_conc = total_num_conc + get_num_conc( &
+         total_num_conc = total_num_conc + num_conc_from_mass( &
             values(i_mode,i_spec,k,i_time), mode_diams(i_mode), &
             mode_std(i_mode), aero_data%density(i_spec))
        end do
        num_conc(i_time,k,i_mode) = total_num_conc
-       vol_frac(i_time,k,i_mode,:) = values(i_mode,:,k,i_time) / &
-            sum(values(i_mode,:,k,i_time))
+       vol_frac(i_time,k,i_mode,:) = values(i_mode,:,k,i_time) / aero_data%density !&
+       vol_frac(i_time,k,i_mode,:) = vol_frac(i_time,k,i_mode,:) / sum(vol_frac(i_time,k,i_mode,:)) !     sum(values(i_mode,:,k,i_time))
        vol_frac_std(i_time,k,i_mode,:) = 0.0d0
        source(i_time,k,i_mode) = mode_source(i_mode)
     end do
@@ -397,12 +367,17 @@ contains
 
     mass_conc = 0.0d0
 
+    ! Check the boundary
+    status = NF90_INQ_DIMID(ncid, 'bdy_width', dimid)
+    status = nf90_inquire_dimension(ncid, dimid, len = bdy_width)
+    call warn_assert_msg(482917356, bdy_width == 1, &
+         "WRF-PartMC only supports bdywidth = 1 currently")
+
+    ! Depending on what boundary we are on, access the right part of the array 
     if (boundary(3:) .eq. "S") then
-       status = NF90_INQ_DIMID(ncid, 'bdy_width', dimid)
-       status = nf90_inquire_dimension(ncid, dimid, len = bdy_width)
-       ind = 1
+       ind = 1 
     else
-       ind = 1
+       ind = bdy_width 
     end if
 
     do i_mode = 1,num_mode_mam3

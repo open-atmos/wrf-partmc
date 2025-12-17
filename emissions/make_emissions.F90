@@ -695,7 +695,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Gets the shape of the 4D array.
+  !> Returns the shape of the 4D array from SMOKE NetCDF file.
   subroutine get_array_dimensions(ncid, dim_size)
 
     !> NetCDF file ID.
@@ -708,16 +708,17 @@ contains
     integer :: i_dim
     integer :: ndims
 
-    ! Get a 4D variable
+    ! Check any 4D variable - time is first variable (and not 4D) so get
+    ! the second.
     varid = 2
     ! Inquire for the dimension IDs
     call pmc_nc_check(nf90_inquire_variable(ncid, varid, ndims=ndims))
+    ! Check that this is truly 4D
     if (ndims /= 4) then
         print *, "Error: variable is not correction number of dimensions"
         stop
     end if
     call pmc_nc_check(nf90_inquire_variable(ncid, varid, dimids=dimids))
-
     ! Loop over all the dimensions to get their lengths
     do i_dim = 1,4
        call pmc_nc_check(nf90_inquire_dimension(ncid, dimids(i_dim), &
@@ -929,8 +930,11 @@ contains
 
     integer :: i
 
-    integer :: spec_index(5)
+    integer :: spec_index
     real(kind=dp) :: tot_vol_frac
+    character(len=100), parameter, dimension(5) :: &
+        smoke_pmc_aero_species_name = ["OIN", "SO4", "NO3", "OC ", "BC "]
+
 
     if (allocated(vol_frac)) deallocate(vol_frac)
     !if (allocated(vol_frac_std)) deallocate(vol_frac_std)
@@ -939,18 +943,11 @@ contains
     vol_frac = 0.0d0
 
     if (sum(species) > 0.0d0) then
-       ! FIXME: Check ordering 
-       ! Map the input species to PartMC species
-       ! SO4 = 1
-       ! NO3 = 2
-       ! OIN = 17
-       ! OC = 18
-       ! BC = 19
-       !spec_index = [1,19,2,18,17]
-       spec_index = [17,1,2,18,19]
        do i = 1, size(species)
+          spec_index = aero_data_spec_by_name(aero_data, &
+               smoke_pmc_aero_species_name(i))
           if (factor(i) > 0.0d0) then
-             vol_frac(spec_index(i)) = factor(i)*species(i)
+             vol_frac(spec_index) = factor(i)*species(i)
           end if
        end do
        vol_frac = vol_frac / aero_data%density
@@ -1143,12 +1140,13 @@ contains
          var_size(2), var_size(3), var_size(4)))
     allocate(temp_species(var_size(1), var_size(2), var_size(3), var_size(4)))
 
+
     if (do_aerosols) then
-    do i_spec = 1,len_aero_species_list(1)
-       name = trim(aero_species_name(i_spec))
-       call pmc_nc_read_real_4d(ncid_emissions, temp_species, name, .true.)
-       aero_emissions_source(i_spec,:,:,:,:) = temp_species
-    end do
+       do i_spec = 1,len_aero_species_list(1)
+          name = trim(aero_species_name(i_spec))
+          call pmc_nc_read_real_4d(ncid_emissions, temp_species, name, .true.)
+          aero_emissions_source(i_spec,:,:,:,:) = temp_species
+       end do
     end if
 
     allocate(gas_emissions_source(n_gas_species,var_size(1), var_size(2), &
@@ -1307,18 +1305,18 @@ contains
     !> Gas data.
     type(gas_data_t), intent(in) :: gas_data
 
+    ! WRF-Chem related input variables
     integer, parameter :: NRADM=31
-    CHARACTER(len=9), DIMENSION(NRADM)     ::  ENAME
+    CHARACTER(len=9), DIMENSION(NRADM) :: ENAME
     CHARACTER(len=9), DIMENSION(20) :: PMC
     integer :: IHR, i_spec, index
     integer :: pmc_gas_index
-    ! EM3RS must not be double precision 
     real(kind=dp), dimension(nx,nz,ny) :: EM3RS
     integer, parameter :: N_PM25 = 10
     integer :: fac_index
     REAL(kind=dp), parameter, dimension(N_PM25) :: pm_factor = (/ .2d0, .8d0, &
          .2d0, .8d0, .2d0, .8d0, .2d0, .8d0, .2d0, .8d0 /)
-    REAL(kind=dp), PARAMETER :: MGPG = 1.0d6     ! ug/g
+    REAL(kind=dp), PARAMETER :: MGPG = 1.0d6 ! ug/g
     character(len=PMC_MAX_FILENAME_LEN) :: out_filename, unit_name
     REAL(kind=dp) :: gas_scale_factor, aerosol_scale_factor
     integer :: dimid_nx, dimid_ny, dimid_nz

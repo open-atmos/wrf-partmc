@@ -66,6 +66,7 @@ program make_emissions
   character(len=9), allocatable :: wrf_species(:)
 
   integer, parameter :: n_species = 5
+  integer :: spec_index(n_species)
 
   ! json
   type(json_file) :: json
@@ -496,6 +497,11 @@ program make_emissions
   ! SMOKE aerosol units: g s^-1
   ! WRF-PartMC wants g s^-1 m^-2
   aerosol_scale_factor =  1.0d0 / (dx*dx)
+
+  spec_index = [17,1,2,18,19]
+  do i_spec = 1,n_emit_species
+     aero_spec_density(i_spec) = aero_data%density(spec_index(i_spec))
+  end do
 
   ! Loop over the grid cells
   do i = is_local, ie_local ! 1,nx

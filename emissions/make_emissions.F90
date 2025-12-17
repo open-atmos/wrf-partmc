@@ -705,17 +705,23 @@ contains
 
     integer :: dimids(4)
     integer :: varid, dimid
+    integer :: i_dim
+    integer :: ndims
 
-    ! name isn't important
-    ! Find the varid
-    status = nf90_inq_varid(ncid, name, varid)
+    ! Get a 4D variable
     varid = 2
     ! Inquire for the dimension IDs
+    call pmc_nc_check(nf90_inquire_variable(ncid, varid, ndims=ndims))
+    if (ndims /= 4) then
+        print *, "Error: variable is not correction number of dimensions"
+        stop
+    end if
     call pmc_nc_check(nf90_inquire_variable(ncid, varid, dimids=dimids))
+
     ! Loop over all the dimensions to get their lengths
-    do dim = 1, 4
-       call pmc_nc_check(nf90_inquire_dimension(ncid, dimids(dim), &
-            len=dim_size(dim)))
+    do i_dim = 1,4
+       call pmc_nc_check(nf90_inquire_dimension(ncid, dimids(i_dim), &
+            len=dim_size(i_dim)))
     end do
 
   end subroutine get_array_dimensions

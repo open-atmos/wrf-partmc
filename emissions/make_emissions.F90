@@ -549,7 +549,7 @@ program make_emissions
                        mode_vol_fracs(temp_size(1)+1,:) = vol_frac
                        write(name,'(a,I2)') trim(modes%mode(s)%name), i_mode 
                        if (s == 1 .and. i_mode == 1) then
-                          mode_names = [name_i(1:100)]
+                          mode_names = [name(1:100)]
                        else
                           mode_names = [mode_names, name(1:100)]
                        end if

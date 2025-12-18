@@ -500,7 +500,7 @@ program make_emissions
                  description="Aerosol emission set-points times (s).")
 
            ! Output the emissions data
-           call aero_dist_output_netcdf(aero_emission,ncid)
+           call aero_dist_output_netcdf(aero_emission, ncid)
 
            ! JHC: This will get put into the above subroutine call eventually
            allocate(mode_weight_class(n_source_classes * 2))
@@ -619,7 +619,8 @@ contains
     real(kind=dp), allocatable, dimension(:,:) :: num_conc
     real(kind=dp), allocatable, dimension(:,:,:) :: vol_frac
     integer :: i_time, i_mode
-
+    integer :: varid_radius, varid_std, varid_srcid, varid_vol_frac, &
+         varid_num_conc
     character(len=(AERO_SOURCE_NAME_LEN)*100) :: aero_source_names
 
     integer :: start(1), count(1)
@@ -637,56 +638,29 @@ contains
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_modes", &
          n_modes, dimid_n_modes))
-    call pmc_nc_check(nf90_enddef(ncid))
-    !
     n_specs = size(aero_emissions(1)%mode(1)%vol_frac)
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_aero_specs", &
          n_specs, dimid_n_specs))
-    call pmc_nc_check(nf90_enddef(ncid))
-
     name='char_radius'
     unit='m'
     long_name = 'characteristic_radius'
     standard_name = 'characteristic_radius'
     description = 'Characteristic radius, with meaning dependent on mode' &
          // ' type (m)'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
+         varid_radius))
+    call pmc_nc_write_atts(ncid, varid_radius, unit, long_name, standard_name, &
          description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(radius(n_modes))
-    do i_mode = 1, n_modes
-       radius(i_mode) = aero_emissions(1)%mode(i_mode)%char_radius
-    end do
-
-    start = (/ 1 /)
-    count = (/ n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, radius, &
-         start = start, count = count))
 
     name='log10_std_dev_radius'
     unit='m'
     long_name = 'log10_std_dev_radius' 
     standard_name = 'log10_std_dev_radius' 
     description = 'Log base 10 of geometric standard deviation of radius, (m).'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
+         varid_std))
+    call pmc_nc_write_atts(ncid, varid_std, unit, long_name, standard_name, &
          description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(std(n_modes))
-    do i_mode = 1, n_modes
-       std(i_mode) = aero_emissions(1)%mode(i_mode)%log10_std_dev_radius
-    end do
-
-    start = (/ 1 /)
-    count = (/ n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, std, &
-         start = start, count = count))
  
     name='source_id'
     unit='(1)'
@@ -694,12 +668,53 @@ contains
     standard_name = 'Source number'
     description = 'Source ID number for each emission mode. Maps to names in ' &
          // 'aero_source'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_INT, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
+         varid_srcid))
+    call pmc_nc_write_atts(ncid, varid_srcid, unit, long_name, standard_name, &
+         description)
+
+    name='num_conc'
+    unit='# m^{-2} s^{-1}'
+    long_name = 'total number concentration flux'
+    standard_name = 'total number concentration flux'
+    description = 'Total number concentration flux of mode (#/m^2/s^1).'
+    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
+         (/dimid_n_modes, dimid_n_times/), varid_num_conc))
+    call pmc_nc_write_atts(ncid, varid_num_conc, unit, long_name, standard_name, &
+         description)
+
+    name='vol_frac'
+    unit='(1)'
+    long_name = 'species fractions'
+    standard_name = 'species_fractions'
+    description = 'Species fractions by volume [length \c aero_data%%n_spec].'
+    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
+         (/dimid_n_specs, dimid_n_modes, dimid_n_times/), varid_vol_frac))
+    call pmc_nc_write_atts(ncid, varid_vol_frac, unit, long_name, standard_name, &
          description)
     call pmc_nc_check(nf90_enddef(ncid))
+
+    ! Data
+    allocate(radius(n_modes))
+    do i_mode = 1, n_modes
+       radius(i_mode) = aero_emissions(1)%mode(i_mode)%char_radius
+    end do
+
+    start = (/ 1 /)
+    count = (/ n_modes/)
+    call pmc_nc_check(nf90_put_var(ncid, varid_radius, radius, &
+         start = start, count = count))
+
+    allocate(std(n_modes))
+    do i_mode = 1, n_modes
+       std(i_mode) = aero_emissions(1)%mode(i_mode)%log10_std_dev_radius
+    end do
+
+    start = (/ 1 /)
+    count = (/ n_modes/)
+    call pmc_nc_check(nf90_put_var(ncid, varid_std, std, &
+         start = start, count = count))
+
     allocate(source(n_modes))
     do i_mode = 1, n_modes
        source(i_mode) = aero_emissions(1)%mode(i_mode)%source
@@ -707,20 +722,9 @@ contains
 
     start = (/ 1 /)
     count = (/ n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, source, &
+    call pmc_nc_check(nf90_put_var(ncid, varid_srcid, source, &
          start = start, count = count))
 
-    name='num_conc'
-    unit='# m^{-2} s^{-1}'
-    long_name = 'total number concentration flux'
-    standard_name = 'total number concentration flux'
-    description = 'Total number concentration flux of mode (#/m^2/s^1).'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
-         (/dimid_n_modes, dimid_n_times/), varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))
     allocate(num_conc(n_modes, n_times))
     do i_time = 1, n_times
     do i_mode = 1, n_modes
@@ -729,20 +733,8 @@ contains
     end do
     start2 = (/ 1, 1 /)
     count2 = (/ n_modes, n_times/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, num_conc, &
+    call pmc_nc_check(nf90_put_var(ncid, varid_num_conc, num_conc, &
          start = start2, count = count2))
-
-    name='vol_frac'
-    unit='(1)'
-    long_name = 'species fractions'
-    standard_name = 'species_fractions'
-    description = 'Species fractions by volume [length \c aero_data%%n_spec].'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
-         (/dimid_n_specs, dimid_n_modes, dimid_n_times/), varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))    
 
     allocate(vol_frac(n_specs, n_modes, n_times))
     do i_time = 1, n_times
@@ -753,7 +745,7 @@ contains
 
     start3 = (/1,1,1/)
     count3 = (/n_specs, n_modes, n_times/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, vol_frac, &
+    call pmc_nc_check(nf90_put_var(ncid, varid_vol_frac, vol_frac, &
          start = start3, count = count3))
 
   end subroutine aero_dist_output_netcdf
@@ -861,7 +853,6 @@ contains
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_gas_specs", &
          n_gas_specs, dimid_n_gas_specs))
-    call pmc_nc_check(nf90_enddef(ncid))
 
     ! Things that are 2D
     name='gas_emission'
@@ -869,7 +860,6 @@ contains
     long_name = 'gas emissions'
     standard_name = 'gas emissions'
     description = 'gas phase emission rates.'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
          (/dimid_n_gas_specs, dimid_n_times/), varid))
     call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &

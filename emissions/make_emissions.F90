@@ -79,21 +79,7 @@ program make_emissions
   integer, parameter :: n_species = 5
   integer :: spec_index(n_species)
   type(sector_t), allocatable, dimension(:) :: smoke_sectors
-
-  ! json
-  type(json_file) :: json
-  type(json_value),pointer :: p, c, q, r
-  type(json_value), pointer :: j_obj
-  type(json_value), pointer :: child
-  integer :: n_children, n_children_modes
-  type(json_core) :: json_obj  ! for manipulating the pointers
-  character(len=:),allocatable :: source_name
-  real(kind=dp), allocatable :: json_diams(:), json_std(:)
-  real(kind=dp), allocatable :: json_fractions(:,:)
-  real(kind=dp), allocatable :: fractions_temp(:)
-  integer :: source_class, weight_class
   type(emissions_t) :: modes
-  logical :: is_found
 
   ! output structures
   type(aero_dist_t), allocatable :: aero_emission(:)
@@ -185,43 +171,8 @@ program make_emissions
 
   ! read in source names
   call spec_file_read_string(file, 'emission_data', sub_filename)
-  call json%initialize()
-  call json%load_file(sub_filename)
-
-  call json%info('sources', is_found, n_children=n_children)
-
-  call json%get('sources', p)  ! get a pointer to child
-  call json_obj%info(p,n_children=n_children)
-  allocate(modes%mode(n_children))
-  do i=1,n_children
-     call json_obj%get_child(p,i,c) ! get pointer to ith element
-     call json_obj%get(c,"source_name", source_name, is_found)
-     call json_obj%get(c,"source_class", source_class, is_found)
-     call json_obj%get(c,"weight_class", weight_class, is_found)
-     call json_obj%get(c,"modes", q)
-     call json_obj%info(q,n_children=n_children_modes)
-
-     allocate(json_diams(n_children_modes))
-     allocate(json_std(n_children_modes))
-     allocate(json_fractions(n_children_modes,n_emit_species))
-     do j = 1,n_children_modes
-        call json_obj%get_child(q,j,r)
-        call json_obj%get(r,"diameter", json_diams(j), is_found)
-        call json_obj%get(r,"std", json_std(j), is_found)
-        call json_obj%get(r,"fractions", fractions_temp, is_found)
-        json_fractions(j,:) = fractions_temp
-      end do
-
-     modes%mode(i)%name = source_name
-     modes%mode(i)%source_class = source_class
-     modes%mode(i)%weight_class = weight_class
-     modes%mode(i)%fractions = json_fractions
-     modes%mode(i)%diams = json_diams
-     modes%mode(i)%std = json_std
-     deallocate(json_diams)
-     deallocate(json_std)
-     deallocate(json_fractions)
-  end do
+  
+  call read_emission_modes_from_json(sub_filename, modes)
 
   ! read in gas_data
   call spec_file_read_string(file, 'gas_data', sub_filename)
@@ -1760,5 +1711,65 @@ contains
   end function to_str
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine read_emission_modes_from_json(sub_filename, modes)
+
+    character(len=PMC_MAX_FILENAME_LEN), intent(in) :: sub_filename
+    type(emissions_t), intent(inout) :: modes
+
+  ! json
+  type(json_file) :: json
+  type(json_value),pointer :: p, c, q, r
+  type(json_value), pointer :: j_obj
+  type(json_value), pointer :: child
+  integer :: n_children, n_children_modes
+  type(json_core) :: json_obj  ! for manipulating the pointers
+  character(len=:),allocatable :: source_name
+  real(kind=dp), allocatable :: json_diams(:), json_std(:)
+  real(kind=dp), allocatable :: json_fractions(:,:)
+  real(kind=dp), allocatable :: fractions_temp(:)
+  integer :: source_class, weight_class
+!  type(emissions_t) :: modes
+  logical :: is_found
+
+  call json%initialize()
+  call json%load_file(sub_filename)
+
+  call json%info('sources', is_found, n_children=n_children)
+
+  call json%get('sources', p)  ! get a pointer to child
+  call json_obj%info(p,n_children=n_children)
+  allocate(modes%mode(n_children))
+  do i=1,n_children
+     call json_obj%get_child(p,i,c) ! get pointer to ith element
+     call json_obj%get(c,"source_name", source_name, is_found)
+     call json_obj%get(c,"source_class", source_class, is_found)
+     call json_obj%get(c,"weight_class", weight_class, is_found)
+     call json_obj%get(c,"modes", q)
+     call json_obj%info(q,n_children=n_children_modes)
+
+     allocate(json_diams(n_children_modes))
+     allocate(json_std(n_children_modes))
+     allocate(json_fractions(n_children_modes,n_emit_species))
+     do j = 1,n_children_modes
+        call json_obj%get_child(q,j,r)
+        call json_obj%get(r,"diameter", json_diams(j), is_found)
+        call json_obj%get(r,"std", json_std(j), is_found)
+        call json_obj%get(r,"fractions", fractions_temp, is_found)
+        json_fractions(j,:) = fractions_temp
+      end do
+
+     modes%mode(i)%name = source_name
+     modes%mode(i)%source_class = source_class
+     modes%mode(i)%weight_class = weight_class
+     modes%mode(i)%fractions = json_fractions
+     modes%mode(i)%diams = json_diams
+     modes%mode(i)%std = json_std
+     deallocate(json_diams)
+     deallocate(json_std)
+     deallocate(json_fractions)
+  end do
+
+  end subroutine read_emission_modes_from_json
 
 end program make_emissions

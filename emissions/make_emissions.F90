@@ -787,10 +787,9 @@ contains
     !> Aerosol species density (kg m^-3).
     real(kind=dp) :: aero_spec_density
 
-    integer :: k
+    real(kind=dp), parameter :: k = 3.0d0 ! Moment parameter
     real(kind=dp) :: density, tmp
 
-    k = 3
     density = aero_spec_density * 1000.0d0 ! g / m^3
     tmp = density * (const%pi / 6.0d0) * diam**k * &
          exp((k**2.0d0 / 2.0d0) * log(std)**2.0d0)

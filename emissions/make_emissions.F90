@@ -19,11 +19,13 @@ program make_emissions
 
   implicit none
 
+  ! Collection of emission sources modes.
   type emissions_t
      !> Internally mixed modes.
      type(aero_emission_source_t), allocatable :: mode(:)
   end type emissions_t
 
+  ! Emission mode information.
   type aero_emission_source_t
       character(len=:),allocatable :: name
       integer :: source_class
@@ -33,9 +35,19 @@ program make_emissions
       real(kind=dp), allocatable :: std(:)
   end type aero_emission_source_t
 
+  ! SMOKE sector file information.
+  type :: sector_t
+     ! SMOKE sector name for grid
+     character(len=:), allocatable :: grid_suffix
+     ! SMOKE prefix for input emissions for sector.
+     character(len=:), allocatable :: emis_prefix
+     ! whether a sector has aerosol emissions
+     logical :: emits_aerosols
+  end type
+
   !> Filename of NetCDF file to open.
-  character(len=200) :: filename_grid
-  character(len=200) :: filename_emissions
+  character(len=300) :: filename_grid
+  character(len=300) :: filename_emissions
   !> NetCDF file ID, in data mode.
   real(kind=dp), allocatable, dimension(:,:,:,:,:) :: gas_emissions, &
        gas_emissions_patch
@@ -64,9 +76,9 @@ program make_emissions
   character(len=9), allocatable :: partmc_species(:)
   character(len=9), allocatable :: smoke_species(:)
   character(len=9), allocatable :: wrf_species(:)
-
   integer, parameter :: n_species = 5
   integer :: spec_index(n_species)
+  type(sector_t), allocatable, dimension(:) :: smoke_sectors
 
   ! json
   type(json_file) :: json
@@ -113,19 +125,21 @@ program make_emissions
   logical :: only_sectional
   real(kind=dp) :: gas_scale_factor, aerosol_scale_factor
   real(kind=dp) :: dx
+  integer, allocatable, dimension(:) :: aero_source_centers
 
+  ! MPI
   integer :: i_send_s, i_send_e
   integer :: rem, is_local, ie_local, n_proc, i_proc, root
   integer :: recv_size_a, recv_size_g
   integer, allocatable, dimension(:) :: displs_a, send_counts_a
   integer, allocatable, dimension(:) :: displs_g, send_counts_g
-  integer, allocatable, dimension(:) :: aero_source_centers
 
 !  character(len=200),parameter,dimension(4) :: mobile_sectors = &
 !      ["RPH", "RPD", "RPV", "RPP"]
   character(len=200),parameter,dimension(3) :: mobile_sectors = &
       ["RPH", "RPV", "RPD"]
 
+  integer :: n_sectors
   integer :: stride, block_length
   integer :: grid_emission
   integer :: n_smoke_species
@@ -143,6 +157,7 @@ program make_emissions
   logical, dimension(n_emit_modes,n_emit_species) :: use_species
   real(kind=dp), dimension(n_emit_species) :: aero_spec_density
   real(kind=dp) :: diam, std, num_conc
+  integer :: i_sector
 
   call pmc_mpi_init()
   ! aero_species_name = ["PMOTHR", "PSO4  ", "PNO3  ", "POC   ", "PEC   "]
@@ -244,6 +259,70 @@ program make_emissions
 
   call spec_file_read_logical(file,'only_sectional',only_sectional)
 
+  n_sectors = 0
+  if (do_point) n_sectors = n_sectors + 1
+  if (do_nonpoint) n_sectors = n_sectors + 1
+  if (do_ag) n_sectors = n_sectors + 1
+  if (do_rwc) n_sectors = n_sectors + 1
+  if (do_nonroad) n_sectors = n_sectors + 1
+  if (do_rail) n_sectors = n_sectors + 1
+  if (do_mobile) n_sectors = n_sectors + size(mobile_sectors)
+!  Handle bio differently for now
+!  if (do_bio) n_sectors = n_sectors + 1
+
+  allocate(smoke_sectors(n_sectors))
+  i_sector = 0
+  if (do_point) then
+    i_sector = i_sector + 1
+    smoke_sectors(i_sector)%grid_suffix =  'point'
+    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.point'
+    smoke_sectors(i_sector)%emits_aerosols = .true.
+  end if
+
+  if (do_nonpoint) then
+    i_sector = i_sector + 1
+    smoke_sectors(i_sector)%grid_suffix =  'nonpt'
+    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.nonpt'
+    smoke_sectors(i_sector)%emits_aerosols = .true.
+  end if
+
+  if (do_ag) then
+    i_sector = i_sector + 1
+    smoke_sectors(i_sector)%grid_suffix =  'ag'
+    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.ag'
+    smoke_sectors(i_sector)%emits_aerosols = .false.
+  end if
+
+  if (do_rwc) then
+    i_sector = i_sector + 1
+    smoke_sectors(i_sector)%grid_suffix =  'rwc'
+    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.rwc'
+    smoke_sectors(i_sector)%emits_aerosols = .true.
+  end if
+
+  if (do_nonroad) then
+    i_sector = i_sector + 1
+    smoke_sectors(i_sector)%grid_suffix =  'nonroad'
+    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.nonroad'
+    smoke_sectors(i_sector)%emits_aerosols = .true.
+  end if
+
+  if (do_rail) then
+    i_sector = i_sector + 1
+    smoke_sectors(i_sector)%grid_suffix =  'rail'
+    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.rail'
+    smoke_sectors(i_sector)%emits_aerosols = .true.
+  end if
+
+  if (do_mobile) then
+    do i_type = 1,size(mobile_sectors)
+       i_sector = i_sector + 1
+       smoke_sectors(i_sector)%grid_suffix =  mobile_sectors(i_type)
+       smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.' // mobile_sectors(i_type)
+       smoke_sectors(i_sector)%emits_aerosols = .true.
+    end do
+  end if
+
   call species_mapping(smoke_species, partmc_species, wrf_species)
 
   n_aero_spec_partmc = aero_data_n_spec(aero_data)
@@ -267,163 +346,19 @@ program make_emissions
      end if
   end do
 
-!  if (pmc_mpi_rank() == 0) then
-     allocate(aero_emissions(nx, ny, nz, nt, n_source_classes, n_species))
-     allocate(gas_emissions(nx, ny, nz, nt, n_gas_spec_partmc))
-!  end if
+  allocate(aero_emissions(nx, ny, nz, nt, n_source_classes, n_species))
+  allocate(gas_emissions(nx, ny, nz, nt, n_gas_spec_partmc))
 
   n_smoke_species = size(smoke_species,1)
 
   ! For memory reasons, only process 0 will read the data.
   if (pmc_mpi_rank() == 0) then
-     if (do_point) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.point.", &
-             trim(grid_name), '.', trim(case_name), '.ncf'
-
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.point.", start_date + i_date, '.', &
-             i_day, '.', trim(grid_name), '.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading point emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, & 
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, & 
+     do i_sector = 1,n_sectors
+        call process_sector(smoke_sectors(i_sector), &
+             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
              n_source_classes, nx, ny, nz, nt, gas_data, smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_nonpoint) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.nonpt.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.nonpt.", start_date + i_date, '.', i_day, &
-             '.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_ag) then
-        do_aerosols = .false.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.ag.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.ag.", start_date + i_date, '.', &
-             i_day, '.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_rwc) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.rwc.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.rwc.", start_date + i_date, '.', &
-             i_day,'.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_nonroad) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.nonroad.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.nonroad.", start_date + i_date, '.', i_day, &
-             '.', trim(grid_name),'.', trim(case_name), '.ncf'
-        write(*,*) 'Reading nonroad emissions', trim(filename_grid), ' ', &
-             trim(filename_emissions)
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, & 
-             n_source_classes, nx, ny, nz, nt, gas_data, smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_rail) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.rail.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.rail.", start_date + i_date, '.', &
-             i_day,'.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_mobile) then
-        do_aerosols = .true.
-        do i_type = 1,size(mobile_sectors)
-           write(filename_grid, '(a,a,a,a,a,a,a,a,a)') trim(dir_path), &
-                "source_groups_out.", &
-                trim(mobile_sectors(i_type)),'.',trim(grid_name), '.', &
-                trim(case_name), '.ncf'
-           i_day = 1 
-           do i_date = 0,n_days-1
-           write(filename_emissions, '(a,a,a,a,i8,a,i1,a,a,a,a,a,a)') &
-                trim(dir_path), "sginlnts_l.", &
-                trim(mobile_sectors(i_type)),'.', start_date + i_date,'.', i_day,'.', &
-                trim(grid_name), '.', trim(case_name),'.ncf' 
-           write(*,*) 'Reading mobile emissions', trim(filename_grid), &
-                trim(filename_emissions)
-           call read_emissions(filename_emissions, filename_grid, &
-                aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-                n_source_classes, nx, ny, nz, nt, gas_data, smoke_species, &
-                partmc_species, n_smoke_species, i_date, do_aerosols)
-           end do
-        end do
-     end if
-
+             partmc_species, n_smoke_species)
+     end do
      if (do_bio) then
         i_day = 1
         do i_date = 0,n_days-1
@@ -1751,6 +1686,78 @@ contains
    end do
 
   end subroutine create_statistics
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine process_sector(sec, aero_emissions, gas_emissions, &
+       n_gas_species, n_aero_species, n_source_classes, nx, ny, nz, nt, &
+       gas_data, smoke_species, partmc_species, n_emission_species)
+
+    !> SMOKE emission sector information.
+    type(sector_t), intent(in) :: sec
+    !> Aerosol emisisons array with source tracking.
+    real(kind=dp), dimension(nx,ny,nz,nt,n_source_classes,n_aero_species) :: &
+        aero_emissions
+    !> Gas emissions array with no source tracking
+    real(kind=dp), dimension(nx,ny,nz,nt,n_gas_species) :: &
+        gas_emissions
+    !> Number of gas species (currently in PartMC).
+    integer :: n_gas_species
+    !> Number of aerosol species (currently in emissions file).
+    integer :: n_aero_species
+    !> Number of tracked sources.
+    integer :: n_source_classes
+    !> East-west dimension size of grid.
+    integer :: nx
+    !> North-south dimension size of grid.
+    integer :: ny
+    !> Vertical dimension size of grid.
+    integer :: nz
+    !> Number of timesteps.
+    integer :: nt
+    !> Gas data type.
+    type(gas_data_t) :: gas_data
+    !>
+    character(len=9), dimension(n_emission_species), intent(in) :: &
+         smoke_species
+    !>
+    character(len=9), dimension(n_emission_species), intent(in) :: &
+         partmc_species
+    !>
+    integer :: n_emission_species
+
+    integer :: i_date, i_day
+    character(len=300) :: fn_grid, fn_emis
+
+    i_day = 1
+    fn_grid = trim(dir_path)//'source_groups_out.'//trim(sec%grid_suffix)//'.'// &
+            trim(grid_name)//'.'//trim(case_name)//'.ncf'
+    do i_date = 0, n_days-1
+      fn_emis = trim(dir_path)//trim(sec%emis_prefix)// '.' // &
+           trim(adjustl(to_str(start_date + i_date)))//'.'// &
+           trim(adjustl(to_str(i_day)))//'.'//trim(grid_name)//'.'// &
+           trim(case_name)//'.ncf'
+      print*, 'Reading ', sec%grid_suffix, fn_grid, fn_emis
+      call read_emissions(fn_emis, fn_grid, aero_emissions, gas_emissions, &
+           n_gas_spec_partmc, n_species, n_source_classes, &
+           nx, ny, nz, nt, gas_data, smoke_species, partmc_species, &
+           n_smoke_species, i_date, sec%emits_aerosols)
+    end do
+
+  end subroutine process_sector
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> Write an integer to a string.
+  pure function to_str(i)
+    integer, intent(in) :: i
+    character(len=:), allocatable :: to_str
+    character(len=32) :: tmp
+
+    write(tmp, '(I0)') i
+    to_str = trim(tmp)
+
+  end function to_str
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

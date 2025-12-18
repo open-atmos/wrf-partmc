@@ -224,53 +224,39 @@ program make_emissions
   allocate(smoke_sectors(n_sectors))
   i_sector = 0
   if (do_point) then
-    i_sector = i_sector + 1
-    smoke_sectors(i_sector)%grid_suffix =  'point'
-    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.point'
-    smoke_sectors(i_sector)%emits_aerosols = .true.
+    call add_sector(smoke_sectors, i_sector, 'point', 'sginlnts_l.point', &
+         has_aero=.true.)
   end if
 
   if (do_nonpoint) then
-    i_sector = i_sector + 1
-    smoke_sectors(i_sector)%grid_suffix =  'nonpt'
-    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.nonpt'
-    smoke_sectors(i_sector)%emits_aerosols = .true.
+    call add_sector(smoke_sectors, i_sector, 'nonpt', 'sginlnts_l.nonpt', &
+         has_aero=.true.)
   end if
 
   if (do_ag) then
-    i_sector = i_sector + 1
-    smoke_sectors(i_sector)%grid_suffix =  'ag'
-    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.ag'
-    smoke_sectors(i_sector)%emits_aerosols = .false.
+    call add_sector(smoke_sectors, i_sector, 'ag', 'sginlnts_l.ag', &
+         has_aero=.false.)
   end if
 
   if (do_rwc) then
-    i_sector = i_sector + 1
-    smoke_sectors(i_sector)%grid_suffix =  'rwc'
-    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.rwc'
-    smoke_sectors(i_sector)%emits_aerosols = .true.
+    call add_sector(smoke_sectors, i_sector, 'rwc', 'sginlnts_l.rwc', &
+         has_aero=.true.)
   end if
 
   if (do_nonroad) then
-    i_sector = i_sector + 1
-    smoke_sectors(i_sector)%grid_suffix =  'nonroad'
-    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.nonroad'
-    smoke_sectors(i_sector)%emits_aerosols = .true.
+    call add_sector(smoke_sectors, i_sector, 'nonroad', 'sginlnts_l.nonroad', &
+         has_aero=.true.)
   end if
 
   if (do_rail) then
-    i_sector = i_sector + 1
-    smoke_sectors(i_sector)%grid_suffix =  'rail'
-    smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.rail'
-    smoke_sectors(i_sector)%emits_aerosols = .true.
+    call add_sector(smoke_sectors, i_sector, 'rail', 'sginlnts_l.rail', &
+         has_aero=.true.)
   end if
 
   if (do_mobile) then
     do i_type = 1,size(mobile_sectors)
-       i_sector = i_sector + 1
-       smoke_sectors(i_sector)%grid_suffix =  mobile_sectors(i_type)
-       smoke_sectors(i_sector)%emis_prefix = 'sginlnts_l.' // mobile_sectors(i_type)
-       smoke_sectors(i_sector)%emits_aerosols = .true.
+       call add_sector(smoke_sectors, i_sector, mobile_sectors(i_type), &
+           'sginlnts_l.' // mobile_sectors(i_type), has_aero=.true.)
     end do
   end if
 
@@ -1344,7 +1330,7 @@ contains
   integer function number_species(file)
 
     !> Spec file.
-    type(spec_file_t), intent(in) :: file
+    type(spec_file_t), intent(inout) :: file
 
     character(len=255) :: line
     integer :: num_lines
@@ -1355,7 +1341,7 @@ contains
     eof = .false.
     max_lines = 0
 
-    call spec_file_read_next_data_line(sub_file, line, eof)
+    call spec_file_read_next_data_line(file, line, eof)
     do while (.not. eof)
        num_lines = num_lines + 1
        if (num_lines > SPEC_FILE_MAX_LIST_LINES) then
@@ -1368,13 +1354,13 @@ contains
           end if
        end if
        if (.not. eof) then
-         call spec_file_read_next_data_line(sub_file, line, eof) 
+         call spec_file_read_next_data_line(file, line, eof)
        end if
     end do
 
     number_species = num_lines
 
-    rewind(unit=sub_file%unit)
+    rewind(unit=file%unit)
 
   end function number_species
 
@@ -1695,6 +1681,21 @@ contains
     end do
 
   end subroutine process_sector
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine add_sector(sectors, i_sec, suffix, prefix, has_aero)
+    type(sector_t), intent(inout) :: sectors(:)
+    integer, intent(inout) :: i_sec
+    character(len=*), intent(in) :: suffix, prefix
+    logical, intent(in) :: has_aero
+
+    i_sec = i_sec + 1
+    sectors(i_sec)%grid_suffix = suffix
+    sectors(i_sec)%emis_prefix = prefix
+    sectors(i_sec)%emits_aerosols = has_aero
+
+  end subroutine add_sector
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

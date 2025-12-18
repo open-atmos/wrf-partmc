@@ -19,11 +19,13 @@ program make_emissions
 
   implicit none
 
+  ! Collection of emission sources modes.
   type emissions_t
      !> Internally mixed modes.
      type(aero_emission_source_t), allocatable :: mode(:)
   end type emissions_t
 
+  ! Emission mode information.
   type aero_emission_source_t
       character(len=:),allocatable :: name
       integer :: source_class
@@ -33,9 +35,19 @@ program make_emissions
       real(kind=dp), allocatable :: std(:)
   end type aero_emission_source_t
 
+  ! SMOKE sector file information.
+  type :: sector_t
+     ! SMOKE sector name for grid
+     character(len=:), allocatable :: grid_suffix
+     ! SMOKE prefix for input emissions for sector.
+     character(len=:), allocatable :: emis_prefix
+     ! whether a sector has aerosol emissions
+     logical :: emits_aerosols
+  end type
+
   !> Filename of NetCDF file to open.
-  character(len=200) :: filename_grid
-  character(len=200) :: filename_emissions
+  character(len=300) :: filename_grid
+  character(len=300) :: filename_emissions
   !> NetCDF file ID, in data mode.
   real(kind=dp), allocatable, dimension(:,:,:,:,:) :: gas_emissions, &
        gas_emissions_patch
@@ -64,23 +76,10 @@ program make_emissions
   character(len=9), allocatable :: partmc_species(:)
   character(len=9), allocatable :: smoke_species(:)
   character(len=9), allocatable :: wrf_species(:)
-
   integer, parameter :: n_species = 5
-
-  ! json
-  type(json_file) :: json
-  type(json_value),pointer :: p, c, q, r
-  type(json_value), pointer :: j_obj
-  type(json_value), pointer :: child
-  integer :: n_children, n_children_modes
-  type(json_core) :: json_obj  ! for manipulating the pointers
-  character(len=:),allocatable :: source_name
-  real(kind=dp), allocatable :: json_diams(:), json_std(:)
-  real(kind=dp), allocatable :: json_fractions(:,:)
-  real(kind=dp), allocatable :: fractions_temp(:)
-  integer :: source_class, weight_class
+  integer :: spec_index(n_species)
+  type(sector_t), allocatable, dimension(:) :: smoke_sectors
   type(emissions_t) :: modes
-  logical :: is_found
 
   ! output structures
   type(aero_dist_t), allocatable :: aero_emission(:)
@@ -112,19 +111,21 @@ program make_emissions
   logical :: only_sectional
   real(kind=dp) :: gas_scale_factor, aerosol_scale_factor
   real(kind=dp) :: dx
+  integer, allocatable, dimension(:) :: aero_source_centers
 
+  ! MPI
   integer :: i_send_s, i_send_e
   integer :: rem, is_local, ie_local, n_proc, i_proc, root
   integer :: recv_size_a, recv_size_g
   integer, allocatable, dimension(:) :: displs_a, send_counts_a
   integer, allocatable, dimension(:) :: displs_g, send_counts_g
-  integer, allocatable, dimension(:) :: aero_source_centers
 
 !  character(len=200),parameter,dimension(4) :: mobile_sectors = &
 !      ["RPH", "RPD", "RPV", "RPP"]
   character(len=200),parameter,dimension(3) :: mobile_sectors = &
       ["RPH", "RPV", "RPD"]
 
+  integer :: n_sectors
   integer :: stride, block_length
   integer :: grid_emission
   integer :: n_smoke_species
@@ -142,6 +143,7 @@ program make_emissions
   logical, dimension(n_emit_modes,n_emit_species) :: use_species
   real(kind=dp), dimension(n_emit_species) :: aero_spec_density
   real(kind=dp) :: diam, std, num_conc
+  integer :: i_sector
 
   call pmc_mpi_init()
   ! aero_species_name = ["PMOTHR", "PSO4  ", "PNO3  ", "POC   ", "PEC   "]
@@ -169,43 +171,8 @@ program make_emissions
 
   ! read in source names
   call spec_file_read_string(file, 'emission_data', sub_filename)
-  call json%initialize()
-  call json%load_file(sub_filename)
-
-  call json%info('sources', is_found, n_children=n_children)
-
-  call json%get('sources', p)  ! get a pointer to child
-  call json_obj%info(p,n_children=n_children)
-  allocate(modes%mode(n_children))
-  do i=1,n_children
-     call json_obj%get_child(p,i,c) ! get pointer to ith element
-     call json_obj%get(c,"source_name", source_name, is_found)
-     call json_obj%get(c,"source_class", source_class, is_found)
-     call json_obj%get(c,"weight_class", weight_class, is_found)
-     call json_obj%get(c,"modes", q)
-     call json_obj%info(q,n_children=n_children_modes)
-
-     allocate(json_diams(n_children_modes))
-     allocate(json_std(n_children_modes))
-     allocate(json_fractions(n_children_modes,n_emit_species))
-     do j = 1,n_children_modes
-        call json_obj%get_child(q,j,r)
-        call json_obj%get(r,"diameter", json_diams(j), is_found)
-        call json_obj%get(r,"std", json_std(j), is_found)
-        call json_obj%get(r,"fractions", fractions_temp, is_found)
-        json_fractions(j,:) = fractions_temp
-      end do
-
-     modes%mode(i)%name = source_name
-     modes%mode(i)%source_class = source_class
-     modes%mode(i)%weight_class = weight_class
-     modes%mode(i)%fractions = json_fractions
-     modes%mode(i)%diams = json_diams
-     modes%mode(i)%std = json_std
-     deallocate(json_diams)
-     deallocate(json_std)
-     deallocate(json_fractions)
-  end do
+  
+  call read_emission_modes_from_json(sub_filename, modes)
 
   ! read in gas_data
   call spec_file_read_string(file, 'gas_data', sub_filename)
@@ -243,6 +210,56 @@ program make_emissions
 
   call spec_file_read_logical(file,'only_sectional',only_sectional)
 
+  n_sectors = 0
+  if (do_point) n_sectors = n_sectors + 1
+  if (do_nonpoint) n_sectors = n_sectors + 1
+  if (do_ag) n_sectors = n_sectors + 1
+  if (do_rwc) n_sectors = n_sectors + 1
+  if (do_nonroad) n_sectors = n_sectors + 1
+  if (do_rail) n_sectors = n_sectors + 1
+  if (do_mobile) n_sectors = n_sectors + size(mobile_sectors)
+!  Handle bio differently for now
+!  if (do_bio) n_sectors = n_sectors + 1
+
+  allocate(smoke_sectors(n_sectors))
+  i_sector = 0
+  if (do_point) then
+    call add_sector(smoke_sectors, i_sector, 'point', 'sginlnts_l.point', &
+         has_aero=.true.)
+  end if
+
+  if (do_nonpoint) then
+    call add_sector(smoke_sectors, i_sector, 'nonpt', 'sginlnts_l.nonpt', &
+         has_aero=.true.)
+  end if
+
+  if (do_ag) then
+    call add_sector(smoke_sectors, i_sector, 'ag', 'sginlnts_l.ag', &
+         has_aero=.false.)
+  end if
+
+  if (do_rwc) then
+    call add_sector(smoke_sectors, i_sector, 'rwc', 'sginlnts_l.rwc', &
+         has_aero=.true.)
+  end if
+
+  if (do_nonroad) then
+    call add_sector(smoke_sectors, i_sector, 'nonroad', 'sginlnts_l.nonroad', &
+         has_aero=.true.)
+  end if
+
+  if (do_rail) then
+    call add_sector(smoke_sectors, i_sector, 'rail', 'sginlnts_l.rail', &
+         has_aero=.true.)
+  end if
+
+  if (do_mobile) then
+    do i_type = 1,size(mobile_sectors)
+       call add_sector(smoke_sectors, i_sector, mobile_sectors(i_type), &
+           'sginlnts_l.' // mobile_sectors(i_type), has_aero=.true.)
+    end do
+  end if
+
   call species_mapping(smoke_species, partmc_species, wrf_species)
 
   n_aero_spec_partmc = aero_data_n_spec(aero_data)
@@ -266,163 +283,19 @@ program make_emissions
      end if
   end do
 
-!  if (pmc_mpi_rank() == 0) then
-     allocate(aero_emissions(nx, ny, nz, nt, n_source_classes, n_species))
-     allocate(gas_emissions(nx, ny, nz, nt, n_gas_spec_partmc))
-!  end if
+  allocate(aero_emissions(nx, ny, nz, nt, n_source_classes, n_species))
+  allocate(gas_emissions(nx, ny, nz, nt, n_gas_spec_partmc))
 
   n_smoke_species = size(smoke_species,1)
 
   ! For memory reasons, only process 0 will read the data.
   if (pmc_mpi_rank() == 0) then
-     if (do_point) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.point.", &
-             trim(grid_name), '.', trim(case_name), '.ncf'
-
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.point.", start_date + i_date, '.', &
-             i_day, '.', trim(grid_name), '.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading point emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, & 
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, & 
+     do i_sector = 1,n_sectors
+        call process_sector(smoke_sectors(i_sector), &
+             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
              n_source_classes, nx, ny, nz, nt, gas_data, smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_nonpoint) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.nonpt.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.nonpt.", start_date + i_date, '.', i_day, &
-             '.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_ag) then
-        do_aerosols = .false.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.ag.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.ag.", start_date + i_date, '.', &
-             i_day, '.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_rwc) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.rwc.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.rwc.", start_date + i_date, '.', &
-             i_day,'.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_nonroad) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.nonroad.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.nonroad.", start_date + i_date, '.', i_day, &
-             '.', trim(grid_name),'.', trim(case_name), '.ncf'
-        write(*,*) 'Reading nonroad emissions', trim(filename_grid), ' ', &
-             trim(filename_emissions)
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, & 
-             n_source_classes, nx, ny, nz, nt, gas_data, smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_rail) then
-        do_aerosols = .true.
-        write(filename_grid, '(a,a,a,a,a,a,a)') trim(dir_path), &
-             "source_groups_out.rail.", trim(grid_name), '.', &
-             trim(case_name), '.ncf'
-        i_day = 1
-        do i_date = 0,n_days-1
-        write(filename_emissions, '(a,a,i8,a,i1,a,a,a,a,a,a)') &
-             trim(dir_path), "sginlnts_l.rail.", start_date + i_date, '.', &
-             i_day,'.',trim(grid_name),'.', trim(case_name),'.ncf'
-
-        write(*,*) 'Reading nonpoint emissions', trim(filename_grid), &
-             trim(filename_emissions)
-
-        call read_emissions(filename_emissions, filename_grid, &
-             aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-             n_source_classes, nx, ny,nz,nt, gas_data,smoke_species, &
-             partmc_species, n_smoke_species, i_date, do_aerosols)
-        end do
-     end if
-
-     if (do_mobile) then
-        do_aerosols = .true.
-        do i_type = 1,size(mobile_sectors)
-           write(filename_grid, '(a,a,a,a,a,a,a,a,a)') trim(dir_path), &
-                "source_groups_out.", &
-                trim(mobile_sectors(i_type)),'.',trim(grid_name), '.', &
-                trim(case_name), '.ncf'
-           i_day = 1 
-           do i_date = 0,n_days-1
-           write(filename_emissions, '(a,a,a,a,i8,a,i1,a,a,a,a,a,a)') &
-                trim(dir_path), "sginlnts_l.", &
-                trim(mobile_sectors(i_type)),'.', start_date + i_date,'.', i_day,'.', &
-                trim(grid_name), '.', trim(case_name),'.ncf' 
-           write(*,*) 'Reading mobile emissions', trim(filename_grid), &
-                trim(filename_emissions)
-           call read_emissions(filename_emissions, filename_grid, &
-                aero_emissions, gas_emissions, n_gas_spec_partmc, n_species, &
-                n_source_classes, nx, ny, nz, nt, gas_data, smoke_species, &
-                partmc_species, n_smoke_species, i_date, do_aerosols)
-           end do
-        end do
-     end if
-
+             partmc_species, n_smoke_species)
+     end do
      if (do_bio) then
         i_day = 1
         do i_date = 0,n_days-1
@@ -497,6 +370,11 @@ program make_emissions
   ! WRF-PartMC wants g s^-1 m^-2
   aerosol_scale_factor =  1.0d0 / (dx*dx)
 
+  spec_index = [17,1,2,18,19]
+  do i_spec = 1,n_emit_species
+     aero_spec_density(i_spec) = aero_data%density(spec_index(i_spec))
+  end do
+
   ! Loop over the grid cells
   do i = is_local, ie_local ! 1,nx
      do j = 1,ny
@@ -543,7 +421,7 @@ program make_emissions
                        mode_vol_fracs(temp_size(1)+1,:) = vol_frac
                        write(name,'(a,I2)') trim(modes%mode(s)%name), i_mode 
                        if (s == 1 .and. i_mode == 1) then
-                          mode_names = [name_i(1:100)]
+                          mode_names = [name(1:100)]
                        else
                           mode_names = [mode_names, name(1:100)]
                        end if
@@ -622,7 +500,7 @@ program make_emissions
                  description="Aerosol emission set-points times (s).")
 
            ! Output the emissions data
-           call aero_dist_output_netcdf(aero_emission,ncid)
+           call aero_dist_output_netcdf(aero_emission, ncid)
 
            ! JHC: This will get put into the above subroutine call eventually
            allocate(mode_weight_class(n_source_classes * 2))
@@ -689,7 +567,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Gets the shape of the 4D array.
+  !> Returns the shape of the 4D array from SMOKE NetCDF file.
   subroutine get_array_dimensions(ncid, dim_size)
 
     !> NetCDF file ID.
@@ -699,17 +577,24 @@ contains
 
     integer :: dimids(4)
     integer :: varid, dimid
+    integer :: i_dim
+    integer :: ndims
 
-    ! name isn't important
-    ! Find the varid
-    status = nf90_inq_varid(ncid, name, varid)
+    ! Check any 4D variable - time is first variable (and not 4D) so get
+    ! the second.
     varid = 2
     ! Inquire for the dimension IDs
+    call pmc_nc_check(nf90_inquire_variable(ncid, varid, ndims=ndims))
+    ! Check that this is truly 4D
+    if (ndims /= 4) then
+        print *, "Error: variable is not correction number of dimensions"
+        stop
+    end if
     call pmc_nc_check(nf90_inquire_variable(ncid, varid, dimids=dimids))
     ! Loop over all the dimensions to get their lengths
-    do dim = 1, 4
-       call pmc_nc_check(nf90_inquire_dimension(ncid, dimids(dim), &
-            len=dim_size(dim)))
+    do i_dim = 1,4
+       call pmc_nc_check(nf90_inquire_dimension(ncid, dimids(i_dim), &
+            len=dim_size(i_dim)))
     end do
 
   end subroutine get_array_dimensions
@@ -734,7 +619,8 @@ contains
     real(kind=dp), allocatable, dimension(:,:) :: num_conc
     real(kind=dp), allocatable, dimension(:,:,:) :: vol_frac
     integer :: i_time, i_mode
-
+    integer :: varid_radius, varid_std, varid_srcid, varid_vol_frac, &
+         varid_num_conc
     character(len=(AERO_SOURCE_NAME_LEN)*100) :: aero_source_names
 
     integer :: start(1), count(1)
@@ -752,56 +638,29 @@ contains
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_modes", &
          n_modes, dimid_n_modes))
-    call pmc_nc_check(nf90_enddef(ncid))
-    !
     n_specs = size(aero_emissions(1)%mode(1)%vol_frac)
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_aero_specs", &
          n_specs, dimid_n_specs))
-    call pmc_nc_check(nf90_enddef(ncid))
-
     name='char_radius'
     unit='m'
     long_name = 'characteristic_radius'
     standard_name = 'characteristic_radius'
     description = 'Characteristic radius, with meaning dependent on mode' &
          // ' type (m)'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
+         varid_radius))
+    call pmc_nc_write_atts(ncid, varid_radius, unit, long_name, standard_name, &
          description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(radius(n_modes))
-    do i_mode = 1, n_modes
-       radius(i_mode) = aero_emissions(1)%mode(i_mode)%char_radius
-    end do
-
-    start = (/ 1 /)
-    count = (/ n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, radius, &
-         start = start, count = count))
 
     name='log10_std_dev_radius'
     unit='m'
     long_name = 'log10_std_dev_radius' 
     standard_name = 'log10_std_dev_radius' 
     description = 'Log base 10 of geometric standard deviation of radius, (m).'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
+         varid_std))
+    call pmc_nc_write_atts(ncid, varid_std, unit, long_name, standard_name, &
          description)
-    call pmc_nc_check(nf90_enddef(ncid))
-    allocate(std(n_modes))
-    do i_mode = 1, n_modes
-       std(i_mode) = aero_emissions(1)%mode(i_mode)%log10_std_dev_radius
-    end do
-
-    start = (/ 1 /)
-    count = (/ n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, std, &
-         start = start, count = count))
  
     name='source_id'
     unit='(1)'
@@ -809,12 +668,53 @@ contains
     standard_name = 'Source number'
     description = 'Source ID number for each emission mode. Maps to names in ' &
          // 'aero_source'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_INT, dimid_n_modes, &
-         varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
+         varid_srcid))
+    call pmc_nc_write_atts(ncid, varid_srcid, unit, long_name, standard_name, &
+         description)
+
+    name='num_conc'
+    unit='# m^{-2} s^{-1}'
+    long_name = 'total number concentration flux'
+    standard_name = 'total number concentration flux'
+    description = 'Total number concentration flux of mode (#/m^2/s^1).'
+    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
+         (/dimid_n_modes, dimid_n_times/), varid_num_conc))
+    call pmc_nc_write_atts(ncid, varid_num_conc, unit, long_name, standard_name, &
+         description)
+
+    name='vol_frac'
+    unit='(1)'
+    long_name = 'species fractions'
+    standard_name = 'species_fractions'
+    description = 'Species fractions by volume [length \c aero_data%%n_spec].'
+    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
+         (/dimid_n_specs, dimid_n_modes, dimid_n_times/), varid_vol_frac))
+    call pmc_nc_write_atts(ncid, varid_vol_frac, unit, long_name, standard_name, &
          description)
     call pmc_nc_check(nf90_enddef(ncid))
+
+    ! Data
+    allocate(radius(n_modes))
+    do i_mode = 1, n_modes
+       radius(i_mode) = aero_emissions(1)%mode(i_mode)%char_radius
+    end do
+
+    start = (/ 1 /)
+    count = (/ n_modes/)
+    call pmc_nc_check(nf90_put_var(ncid, varid_radius, radius, &
+         start = start, count = count))
+
+    allocate(std(n_modes))
+    do i_mode = 1, n_modes
+       std(i_mode) = aero_emissions(1)%mode(i_mode)%log10_std_dev_radius
+    end do
+
+    start = (/ 1 /)
+    count = (/ n_modes/)
+    call pmc_nc_check(nf90_put_var(ncid, varid_std, std, &
+         start = start, count = count))
+
     allocate(source(n_modes))
     do i_mode = 1, n_modes
        source(i_mode) = aero_emissions(1)%mode(i_mode)%source
@@ -822,20 +722,9 @@ contains
 
     start = (/ 1 /)
     count = (/ n_modes/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, source, &
+    call pmc_nc_check(nf90_put_var(ncid, varid_srcid, source, &
          start = start, count = count))
 
-    name='num_conc'
-    unit='# m^{-2} s^{-1}'
-    long_name = 'total number concentration flux'
-    standard_name = 'total number concentration flux'
-    description = 'Total number concentration flux of mode (#/m^2/s^1).'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
-         (/dimid_n_modes, dimid_n_times/), varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))
     allocate(num_conc(n_modes, n_times))
     do i_time = 1, n_times
     do i_mode = 1, n_modes
@@ -844,20 +733,8 @@ contains
     end do
     start2 = (/ 1, 1 /)
     count2 = (/ n_modes, n_times/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, num_conc, &
+    call pmc_nc_check(nf90_put_var(ncid, varid_num_conc, num_conc, &
          start = start2, count = count2))
-
-    name='vol_frac'
-    unit='(1)'
-    long_name = 'species fractions'
-    standard_name = 'species_fractions'
-    description = 'Species fractions by volume [length \c aero_data%%n_spec].'
-    call pmc_nc_check(nf90_redef(ncid))
-    call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
-         (/dimid_n_specs, dimid_n_modes, dimid_n_times/), varid))
-    call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
-         description)
-    call pmc_nc_check(nf90_enddef(ncid))    
 
     allocate(vol_frac(n_specs, n_modes, n_times))
     do i_time = 1, n_times
@@ -868,7 +745,7 @@ contains
 
     start3 = (/1,1,1/)
     count3 = (/n_specs, n_modes, n_times/)
-    call pmc_nc_check(nf90_put_var(ncid, varid, vol_frac, &
+    call pmc_nc_check(nf90_put_var(ncid, varid_vol_frac, vol_frac, &
          start = start3, count = count3))
 
   end subroutine aero_dist_output_netcdf
@@ -888,10 +765,9 @@ contains
     !> Aerosol species density (kg m^-3).
     real(kind=dp) :: aero_spec_density
 
-    integer :: k
+    real(kind=dp), parameter :: k = 3.0d0 ! Moment parameter
     real(kind=dp) :: density, tmp
 
-    k = 3
     density = aero_spec_density * 1000.0d0 ! g / m^3
     tmp = density * (const%pi / 6.0d0) * diam**k * &
          exp((k**2.0d0 / 2.0d0) * log(std)**2.0d0)
@@ -916,37 +792,29 @@ contains
     real(kind=dp), dimension(5) :: factor 
 
     integer :: i
-
-    integer :: spec_index(5)
+    integer :: spec_index
     real(kind=dp) :: tot_vol_frac
+    ! Map of PartMC species names to SMOKE aerosol species names.
+    character(len=100), parameter, dimension(5) :: &
+        smoke_pmc_aero_species_name = ["OIN", "SO4", "NO3", "OC ", "BC "]
+
 
     if (allocated(vol_frac)) deallocate(vol_frac)
-    !if (allocated(vol_frac_std)) deallocate(vol_frac_std)
     allocate(vol_frac(n_specs))
-    !allocate(vol_frac_std(n_specs))
     vol_frac = 0.0d0
 
     if (sum(species) > 0.0d0) then
-       ! FIXME: Check ordering 
-       ! Map the input species to PartMC species
-       ! SO4 = 1
-       ! NO3 = 2
-       ! OIN = 17
-       ! OC = 18
-       ! BC = 19
-       !spec_index = [1,19,2,18,17]
-       spec_index = [17,1,2,18,19]
        do i = 1, size(species)
+          spec_index = aero_data_spec_by_name(aero_data, &
+               smoke_pmc_aero_species_name(i))
+          if (spec_index <= 0) cycle
           if (factor(i) > 0.0d0) then
-             vol_frac(spec_index(i)) = factor(i)*species(i)
+             vol_frac(spec_index) = factor(i)*species(i)
           end if
        end do
        vol_frac = vol_frac / aero_data%density
        tot_vol_frac = sum(vol_frac)
-
-       ! convert mass fractions to volume fractions
        vol_frac = vol_frac / tot_vol_frac
-       !vol_frac_std = vol_frac_std / aero_data%density
    else ! There isn't anything for this mode so set a dummy value
        vol_frac = 1.0d0
        vol_frac = vol_frac / sum(vol_frac)
@@ -985,7 +853,6 @@ contains
     call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_dim(ncid, "n_gas_specs", &
          n_gas_specs, dimid_n_gas_specs))
-    call pmc_nc_check(nf90_enddef(ncid))
 
     ! Things that are 2D
     name='gas_emission'
@@ -993,7 +860,6 @@ contains
     long_name = 'gas emissions'
     standard_name = 'gas emissions'
     description = 'gas phase emission rates.'
-    call pmc_nc_check(nf90_redef(ncid))
     call pmc_nc_check(nf90_def_var(ncid, name, NF90_DOUBLE, &
          (/dimid_n_gas_specs, dimid_n_times/), varid))
     call pmc_nc_write_atts(ncid, varid, unit, long_name, standard_name, &
@@ -1131,12 +997,13 @@ contains
          var_size(2), var_size(3), var_size(4)))
     allocate(temp_species(var_size(1), var_size(2), var_size(3), var_size(4)))
 
+
     if (do_aerosols) then
-    do i_spec = 1,len_aero_species_list(1)
-       name = trim(aero_species_name(i_spec))
-       call pmc_nc_read_real_4d(ncid_emissions, temp_species, name, .true.)
-       aero_emissions_source(i_spec,:,:,:,:) = temp_species
-    end do
+       do i_spec = 1,len_aero_species_list(1)
+          name = trim(aero_species_name(i_spec))
+          call pmc_nc_read_real_4d(ncid_emissions, temp_species, name, .true.)
+          aero_emissions_source(i_spec,:,:,:,:) = temp_species
+       end do
     end if
 
     allocate(gas_emissions_source(n_gas_species,var_size(1), var_size(2), &
@@ -1295,18 +1162,18 @@ contains
     !> Gas data.
     type(gas_data_t), intent(in) :: gas_data
 
+    ! WRF-Chem related input variables
     integer, parameter :: NRADM=31
-    CHARACTER(len=9), DIMENSION(NRADM)     ::  ENAME
+    CHARACTER(len=9), DIMENSION(NRADM) :: ENAME
     CHARACTER(len=9), DIMENSION(20) :: PMC
     integer :: IHR, i_spec, index
     integer :: pmc_gas_index
-    ! EM3RS must not be double precision 
     real(kind=dp), dimension(nx,nz,ny) :: EM3RS
     integer, parameter :: N_PM25 = 10
     integer :: fac_index
     REAL(kind=dp), parameter, dimension(N_PM25) :: pm_factor = (/ .2d0, .8d0, &
          .2d0, .8d0, .2d0, .8d0, .2d0, .8d0, .2d0, .8d0 /)
-    REAL(kind=dp), PARAMETER :: MGPG = 1.0d6     ! ug/g
+    REAL(kind=dp), PARAMETER :: MGPG = 1.0d6 ! ug/g
     character(len=PMC_MAX_FILENAME_LEN) :: out_filename, unit_name
     REAL(kind=dp) :: gas_scale_factor, aerosol_scale_factor
     integer :: dimid_nx, dimid_ny, dimid_nz
@@ -1453,7 +1320,7 @@ contains
   integer function number_species(file)
 
     !> Spec file.
-    type(spec_file_t), intent(in) :: file
+    type(spec_file_t), intent(inout) :: file
 
     character(len=255) :: line
     integer :: num_lines
@@ -1464,7 +1331,7 @@ contains
     eof = .false.
     max_lines = 0
 
-    call spec_file_read_next_data_line(sub_file, line, eof)
+    call spec_file_read_next_data_line(file, line, eof)
     do while (.not. eof)
        num_lines = num_lines + 1
        if (num_lines > SPEC_FILE_MAX_LIST_LINES) then
@@ -1477,13 +1344,13 @@ contains
           end if
        end if
        if (.not. eof) then
-         call spec_file_read_next_data_line(sub_file, line, eof) 
+         call spec_file_read_next_data_line(file, line, eof)
        end if
     end do
 
     number_species = num_lines
 
-    rewind(unit=sub_file%unit)
+    rewind(unit=file%unit)
 
   end function number_species
 
@@ -1745,6 +1612,157 @@ contains
    end do
 
   end subroutine create_statistics
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> Process a given sector.
+  subroutine process_sector(sec, aero_emissions, gas_emissions, &
+       n_gas_species, n_aero_species, n_source_classes, nx, ny, nz, nt, &
+       gas_data, smoke_species, partmc_species, n_emission_species)
+
+    !> SMOKE emission sector information.
+    type(sector_t), intent(in) :: sec
+    !> Aerosol emisisons array with source tracking.
+    real(kind=dp), dimension(nx,ny,nz,nt,n_source_classes,n_aero_species) :: &
+        aero_emissions
+    !> Gas emissions array with no source tracking
+    real(kind=dp), dimension(nx,ny,nz,nt,n_gas_species) :: &
+        gas_emissions
+    !> Number of gas species (currently in PartMC).
+    integer :: n_gas_species
+    !> Number of aerosol species (currently in emissions file).
+    integer :: n_aero_species
+    !> Number of tracked sources.
+    integer :: n_source_classes
+    !> East-west dimension size of grid.
+    integer :: nx
+    !> North-south dimension size of grid.
+    integer :: ny
+    !> Vertical dimension size of grid.
+    integer :: nz
+    !> Number of timesteps.
+    integer :: nt
+    !> Gas data type.
+    type(gas_data_t) :: gas_data
+    !>
+    character(len=9), dimension(n_emission_species), intent(in) :: &
+         smoke_species
+    !>
+    character(len=9), dimension(n_emission_species), intent(in) :: &
+         partmc_species
+    !>
+    integer :: n_emission_species
+
+    integer :: i_date, i_day
+    character(len=300) :: fn_grid, fn_emis
+
+    i_day = 1
+    fn_grid = trim(dir_path)//'source_groups_out.'//trim(sec%grid_suffix)//'.'// &
+            trim(grid_name)//'.'//trim(case_name)//'.ncf'
+    do i_date = 0, n_days-1
+      fn_emis = trim(dir_path)//trim(sec%emis_prefix)// '.' // &
+           trim(adjustl(to_str(start_date + i_date)))//'.'// &
+           trim(adjustl(to_str(i_day)))//'.'//trim(grid_name)//'.'// &
+           trim(case_name)//'.ncf'
+      print*, 'Reading ', sec%grid_suffix, ' ', trim(fn_grid), ' ', trim(fn_emis)
+      call read_emissions(fn_emis, fn_grid, aero_emissions, gas_emissions, &
+           n_gas_spec_partmc, n_species, n_source_classes, &
+           nx, ny, nz, nt, gas_data, smoke_species, partmc_species, &
+           n_smoke_species, i_date, sec%emits_aerosols)
+    end do
+
+  end subroutine process_sector
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> Adds sector details to a sector.
+  subroutine add_sector(sectors, i_sec, suffix, prefix, has_aero)
+    type(sector_t), intent(inout) :: sectors(:)
+    integer, intent(inout) :: i_sec
+    character(len=*), intent(in) :: suffix, prefix
+    logical, intent(in) :: has_aero
+
+    i_sec = i_sec + 1
+    sectors(i_sec)%grid_suffix = suffix
+    sectors(i_sec)%emis_prefix = prefix
+    sectors(i_sec)%emits_aerosols = has_aero
+
+  end subroutine add_sector
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> Write an integer to a string.
+  pure function to_str(i)
+    integer, intent(in) :: i
+    character(len=:), allocatable :: to_str
+    character(len=32) :: tmp
+
+    write(tmp, '(I0)') i
+    to_str = trim(tmp)
+
+  end function to_str
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> Read specification of emisison modes from a JSON file.
+  subroutine read_emission_modes_from_json(sub_filename, modes)
+
+    character(len=PMC_MAX_FILENAME_LEN), intent(in) :: sub_filename
+    type(emissions_t), intent(inout) :: modes
+
+    ! json
+    type(json_file) :: json
+    type(json_value),pointer :: p, c, q, r
+    type(json_value), pointer :: j_obj
+    type(json_value), pointer :: child
+    integer :: n_children, n_children_modes
+    type(json_core) :: json_obj  ! for manipulating the pointers
+    character(len=:),allocatable :: source_name
+    real(kind=dp), allocatable :: json_diams(:), json_std(:)
+    real(kind=dp), allocatable :: json_fractions(:,:)
+    real(kind=dp), allocatable :: fractions_temp(:)
+    integer :: source_class, weight_class
+    logical :: is_found
+
+    call json%initialize()
+    call json%load_file(sub_filename)
+
+    call json%info('sources', is_found, n_children=n_children)
+
+    call json%get('sources', p)  ! get a pointer to child
+    call json_obj%info(p,n_children=n_children)
+    allocate(modes%mode(n_children))
+    do i=1,n_children
+       call json_obj%get_child(p,i,c) ! get pointer to ith element
+       call json_obj%get(c,"source_name", source_name, is_found)
+       call json_obj%get(c,"source_class", source_class, is_found)
+       call json_obj%get(c,"weight_class", weight_class, is_found)
+       call json_obj%get(c,"modes", q)
+       call json_obj%info(q,n_children=n_children_modes)
+
+       allocate(json_diams(n_children_modes))
+       allocate(json_std(n_children_modes))
+       allocate(json_fractions(n_children_modes,n_emit_species))
+       do j = 1,n_children_modes
+          call json_obj%get_child(q,j,r)
+          call json_obj%get(r,"diameter", json_diams(j), is_found)
+          call json_obj%get(r,"std", json_std(j), is_found)
+          call json_obj%get(r,"fractions", fractions_temp, is_found)
+          json_fractions(j,:) = fractions_temp
+       end do
+
+       modes%mode(i)%name = source_name
+       modes%mode(i)%source_class = source_class
+       modes%mode(i)%weight_class = weight_class
+       modes%mode(i)%fractions = json_fractions
+       modes%mode(i)%diams = json_diams
+       modes%mode(i)%std = json_std
+       deallocate(json_diams)
+       deallocate(json_std)
+       deallocate(json_fractions)
+    end do
+
+  end subroutine read_emission_modes_from_json
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

@@ -1983,11 +1983,11 @@ contains
           end do
 
           do i_mode = 1,n_modes
-             aero_dist_init%mode(i_mode)%num_conc = q_value / 8.0d0
+             aero_dist_init%mode(i_mode)%num_conc = max(q_value / 8.0d0, 1.0d-15)
           end do
-          gas_states(i,k,j)%mix_rat(pmc_o3) = q_value / 8.0d0  / 1.0d8
+          gas_states(i,k,j)%mix_rat(pmc_o3) = 1000.0d0 * max(q_value / 8.0d0, 1.0d-15)
           call aero_state_add_aero_dist_sample(aero_states(i,k,j), &
-               aero_data, aero_dist_init, 1.0 &
+               aero_data, aero_dist_init, 1.0d0 &
                / real(grid%alt(i,k,j), kind=dp), 1.0d0, 0.0d0, .true., &
                .true.)
 

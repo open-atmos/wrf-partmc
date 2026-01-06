@@ -84,6 +84,7 @@ contains
     integer :: i_start, i_end, j_start, j_end
     integer :: nx,ny,nz
     real(kind=dp) :: t1, t2
+    type(env_state_t) :: env_states_tmp(pmc_ks:pmc_ke)
 
     if (grid%do_transport) then
 #ifdef PMC_DEBUG
@@ -137,10 +138,16 @@ contains
 
        do j = j_start,j_end 
        do i = i_start,i_end
+          do k = pmc_ks, pmc_ke
+             env_states_tmp(k) = env_states(i,k,j)
+          end do
           call compute_vertical_probs(grid, &
-               env_states(i,pmc_ks:pmc_ke,j), global_nz, &
+               env_states_tmp, global_nz, &
                aero_weight_array_n_class(aero_states(i,pmc_ks,j)%awa), &
-               config_flags%vertmix_onoff)
+               config_flags%vertmix_onoff, config_flags%bl_pbl_physics)
+          do k = pmc_ks, pmc_ke
+             env_states(i,k,j) = env_states_tmp(k)
+          end do
        end do
        end do
 
@@ -412,7 +419,7 @@ contains
 
   !> Compute vertical probabilities.
   subroutine compute_vertical_probs(grid, env_states, nz, n_class, &
-       do_vertmix)
+       do_vertmix, pbl_scheme)
 
     !> WRF grid.
     type(domain), intent(inout) :: grid
@@ -424,6 +431,8 @@ contains
     integer, intent(in) :: n_class
     !> Vertical mixing flag due to turbulence.
     integer, intent(in) :: do_vertmix
+    !> WRF PBL scheme choice.
+    integer, intent(in) :: pbl_scheme
 
     integer :: t, k
     integer :: num_steps, i_class
@@ -459,9 +468,15 @@ contains
 
     ! Compute K on the w points (boundaries between cells only)
     k_w = 0.0d0
-    do k = 1,nz-1
-       k_w(k)=max(1.0d-6,real(grid%exch_h(pmc_i,k+1,pmc_j),kind=dp))
-    end do
+    if (pbl_scheme > 0) then
+       do k = 1,nz-1
+          k_w(k)=max(1.0d-6,real(grid%exch_h(pmc_i,k+1,pmc_j),kind=dp))
+       end do
+    else
+       do k = 1,nz-1
+          k_w(k)=max(1.0d-6,real(grid%xkhv(pmc_i,k+1,pmc_j),kind=dp))
+       end do
+    end if
     ! Compute inverse density on the w points (boundaries between cells)
     do k = 1,nz-1
        tmp = real(z_mass(k+1) - z_mass(k),kind=dp)

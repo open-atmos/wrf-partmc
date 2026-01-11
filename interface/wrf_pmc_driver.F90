@@ -1126,7 +1126,7 @@ contains
 !       end do
 
        ! Total BC number concentration for determining fraction
-       if (aero_spec_data_spec_by_name(aero_data, "BC") then
+       if (aero_data_spec_by_name(aero_data, "BC") > 0) then
           contains_bc = bc_masses > 0.0d0
           num_concs_bc = pack(num_concs, contains_bc)
           grid%tot_bc_num_conc(i,k,j) = sum(num_concs_bc)

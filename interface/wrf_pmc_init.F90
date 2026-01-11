@@ -614,6 +614,8 @@ contains
          check_name, check_dim_size))
     n_aero_specs = check_dim_size
 
+    call assert_msg(482917635, n_aero_specs == aero_data_n_spec(aero_data), &
+         "Number of species in aero_data does not match emission inputs")
     !print*, 'number of modes =', n_modes, 'number of specs = ', n_aero_specs, &
     !     'number of times = ', n_time
 
@@ -713,9 +715,9 @@ contains
           scenario%aero_emission(i_time)%mode(i_mode)%num_conc = &
                num_conc(i_mode, i_time)
           scenario%aero_emission(i_time)%mode(i_mode)%vol_frac = &
-               vol_frac(1:20,i_mode,i_time)
+               vol_frac(:,i_mode,i_time)
           scenario%aero_emission(i_time)%mode(i_mode)%vol_frac_std = &
-               vol_frac_std(1:20,i_mode,i_time)
+               vol_frac_std(:,i_mode,i_time)
           ! FIXME: Fix this source information
           scenario%aero_emission(i_time)%mode(i_mode)%source = dummy
           if (char_radius(i_mode) < 0.01e-6) then
@@ -833,6 +835,10 @@ contains
     call pmc_nc_check(nf90_Inquire_Dimension(ncid, dimid_n_aero_specs, &
             check_name, check_dim_size))
     n_aero_specs = check_dim_size
+
+    call assert_msg(739184526, n_aero_specs == aero_data_n_spec(aero_data), &
+         "Number of species in aero_data does not match boundary inputs")
+
     call pmc_nc_read_real_1d(ncid, aero_bc_time, &
          'aero_bc_time', .true.)
 
@@ -994,6 +1000,9 @@ contains
     call pmc_nc_check(nf90_Inquire_Dimension(ncid, dimid_n_aero_specs, &
          check_name, check_dim_size))
     n_aero_specs = check_dim_size
+
+    call assert_msg(195802473, n_aero_specs == aero_data_n_spec(aero_data), &
+         "Number of species in aero_data does not match initial condition inputs")
 
     call pmc_nc_read_integer_2d(ncid, mode_type, "mode_type", .true.)
     call pmc_nc_read_real_2d(ncid, char_radius, "char_radius", .true.)

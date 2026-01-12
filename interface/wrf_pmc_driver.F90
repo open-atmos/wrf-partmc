@@ -1126,12 +1126,14 @@ contains
 !       end do
 
        ! Total BC number concentration for determining fraction
-       contains_bc = bc_masses > 0.0d0
-       num_concs_bc = pack(num_concs, contains_bc)
-       grid%tot_bc_num_conc(i,k,j) = sum(num_concs_bc)
-       is_ccn_active = crit_rel_humids < env_sat(2)
-       grid%tot_bc_num_conc_aged(i,k,j) = sum(pack(num_concs, &
-            (contains_bc .and. is_ccn_active)))
+       if (aero_data_spec_by_name(aero_data, "BC") > 0) then
+          contains_bc = bc_masses > 0.0d0
+          num_concs_bc = pack(num_concs, contains_bc)
+          grid%tot_bc_num_conc(i,k,j) = sum(num_concs_bc)
+          is_ccn_active = crit_rel_humids < env_sat(2)
+          grid%tot_bc_num_conc_aged(i,k,j) = sum(pack(num_concs, &
+               (contains_bc .and. is_ccn_active)))
+       end if
 
        ! total number of computational particles
        grid%n_parts(i,k,j) = aero_state_n_part(aero_states(i,k,j))
@@ -1161,20 +1163,20 @@ contains
           i_mode = 1
           is_size_range = 2 * grid_model%edges(i_mode) < dry_diameters &
                .and. dry_diameters <= 2 * grid_model%edges(i_mode+1)
-          grid%num_conc_a1 = sum(pack(num_concs, is_size_range))
-          grid%mass_conc_a1 = sum(pack(dry_mass_conc, is_size_range))
+          grid%num_conc_a1(i,k,j) = sum(pack(num_concs, is_size_range))
+          grid%mass_conc_a1(i,k,j) = sum(pack(dry_mass_conc, is_size_range))
 
           i_mode = 2
           is_size_range = 2 * grid_model%edges(i_mode) < dry_diameters &
                .and. dry_diameters <= 2 * grid_model%edges(i_mode+1)
-          grid%num_conc_a2 = sum(pack(num_concs, is_size_range))
-          grid%mass_conc_a2 = sum(pack(dry_mass_conc, is_size_range))
+          grid%num_conc_a2(i,k,j) = sum(pack(num_concs, is_size_range))
+          grid%mass_conc_a2(i,k,j) = sum(pack(dry_mass_conc, is_size_range))
 
           i_mode = 3
           is_size_range = 2 * grid_model%edges(i_mode) < dry_diameters &
                .and. dry_diameters <= 2 * grid_model%edges(i_mode+1)
-          grid%num_conc_a3 = sum(pack(num_concs, is_size_range))
-          grid%mass_conc_a3 = sum(pack(dry_mass_conc, is_size_range))
+          grid%num_conc_a3(i,k,j) = sum(pack(num_concs, is_size_range))
+          grid%mass_conc_a3(i,k,j) = sum(pack(dry_mass_conc, is_size_range))
        end if
 
        ! Optical properties
@@ -1213,9 +1215,9 @@ contains
                + grid%scat_aer_550_internal(i,k,j)
 
           b_scat = aero_state_scattering_binned(aero_state_average, aero_data, &
-               grid_model, diameters, i_550nm)
+               grid_model, diameters_average, i_550nm)
           b_abs = aero_state_absorption_binned(aero_state_average, aero_data, &
-               grid_model, diameters, i_550nm)
+               grid_model, diameters_average, i_550nm)
 
           grid%scat_aer_550_internal_a1(i,k,j) = b_scat(1)
           grid%scat_aer_550_internal_a2(i,k,j) = b_scat(2)

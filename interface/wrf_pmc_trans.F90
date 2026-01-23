@@ -75,14 +75,8 @@ contains
     !> Top-bottom domain dimension size of WRF domain.
     integer, intent(in) :: global_nz
 
-    integer :: numgas
-    integer :: ids,ide, jds,jde, kds,kde,              &
-               ims,ime, jms,jme, kms,kme,              &
-               its,ite, jts,jte, kts,kte,               &
-               ips,ipe, jps,jpe, kps,kpe
-    integer :: i,j,k, i_class
+    integer :: i, j, k, i_class
     integer :: i_start, i_end, j_start, j_end
-    integer :: nx,ny,nz
     real(kind=dp) :: t1, t2
     type(env_state_t) :: env_states_tmp(pmc_ks:pmc_ke)
 
@@ -104,6 +98,7 @@ contains
                env_states(i,k,j))
           env_states(i,k,j)%prob_vert_diffusion = 0.0d0
           call compute_diffusion_probs(grid, env_states(i,k,j))
+          ! Uncomment for reflective boundary conditions (testing)
           !call eliminate_boundary_influence(env_states(i,k,j), &
           !   global_nx, global_ny)
        end do
@@ -291,73 +286,6 @@ contains
     end do
 
   end subroutine compute_advect_probs_wrf
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  !> Compute probabilities from upwind method fluxes
-  subroutine compute_advect_probs(grid, env_state)
-
-    !> WRF grid.
-    type(domain), intent(inout) :: grid
-    !> Environmental state.
-    type(env_state_t), intent(inout) :: env_state
-
-    integer :: i, j, k
-    real(kind=dp) :: dx, dy, dt, dz
-    real(kind=dp) :: vel, flux
-
-    env_state%prob_advection = 0.0d0
-
-    i = env_state%cell_ix
-    j = env_state%cell_iy
-    k = env_state%cell_iz
-
-    dx = grid%dx
-    dy = grid%dy
-    dz = - 1.0d0 * grid%dnw(k)
-    dt = grid%dt
-
-    ! X direction
-    ! F i+1/2
-    vel = grid%u_2(i+1,k,j) 
-    flux = (dt * (vel + abs(vel)))/(2.0d0*dx)
-    env_state%prob_advection(1,0,0,:) = flux
-
-    ! F i-1/2
-    vel = grid%u_2(i,k,j) 
-    flux = -(dt * (vel - abs(vel)))/(2.0d0*dx)
-    env_state%prob_advection(-1,0,0,:) = flux
-
-    ! Y direction
-    ! F j + 1/2
-    vel = grid%v_2(i,k,j+1) 
-    flux = (dt * (vel + abs(vel)))/(2.0d0*dy)
-    env_state%prob_advection(0,0,1,:) = flux
-
-    ! F j - 1/2
-    vel = grid%v_2(i,k,j)
-    flux = -(dt * (vel - abs(vel)))/(2.0d0*dy)
-    env_state%prob_advection(0,0,-1,:) = flux
-
-    ! Vertical advection
-    if (k == 1) then
-       vel =  -1.0d0 * grid%ww(i,k+1,j) / grid%mut(i,j)
-       flux = (dt * (vel + abs(vel)))/(2.0d0*dz)
-       env_state%prob_advection(0,1,0,:) = flux
-    else if (k == 39) then
-       vel =  - 1.0d0 * grid%ww(i,k,j) / grid%mut(i,j)
-       flux = -(dt * (vel - abs(vel)))/(2.0d0*dz)
-       env_state%prob_advection(0,-1,0,:) = flux
-    else
-       vel = - 1.0d0 * grid%ww(i,k+1,j) / grid%mut(i,j)
-       flux = (dt * (vel + abs(vel)))/(2.0d0*dz)
-       env_state%prob_advection(0,1,0,:) = flux
-       vel =  - 1.0d0 * grid%ww(i,k,j) / grid%mut(i,j)
-       flux = -(dt * (vel - abs(vel)))/(2.0d0*dz)
-       env_state%prob_advection(0,-1,0,:) = flux
-    end if
-
-  end subroutine compute_advect_probs
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -668,10 +596,16 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !> Eliminate the influence of the boundary condition by zeroing out
+  !> probabilities that would move particles into the boundary as well
+  !> as particles moving into the domain from boundary grid cells.
   subroutine eliminate_boundary_influence(env_state, global_nx, global_ny)
 
+    !> Environmental state to modify
     type(env_state_t), intent(inout) :: env_state
+    !> East-west domain dimension size of WRF domain.
     integer, intent(in) :: global_nx
+    !> North-south domain dimension size of WRF domain.
     integer, intent(in) :: global_ny
 
     integer :: i, j
@@ -679,11 +613,12 @@ contains
     i = env_state%cell_ix
     j = env_state%cell_iy
 
+    ! Prevent particles from flowing from the boundary to interior domain.
     if (i == 1 .or. i == global_nx .or. j == 1 .or. j ==global_ny) then
        env_state%prob_advection = 0.0d0
        env_state%prob_diffusion = 0.0d0
     end if
-    ! If we want reflection at the boundary
+    ! Reflection at the boundary so particles do not leave interior.
     if (i == 2) then
        env_state%prob_advection(-1,0,0,:) = 0.0d0
        env_state%prob_diffusion(-1,0,0,:) = 0.0d0
@@ -703,9 +638,12 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Normalize the probabilities to be no greater than 1
+  !> Normalize the probabilities to be no greater than 1.
   subroutine normalize_probs(env_state, i_class)
+
+    !> Environmental state.
     type(env_state_t), intent(inout) :: env_state
+    !> Aerosol weight class.
     integer, intent(in) :: i_class
 
     real(kind=dp) :: prob_sum
@@ -744,7 +682,6 @@ contains
        env_state%prob_advection(:,0,:,i_class) = &
             env_state%prob_advection(:,0,:,i_class) / (prob_sum)
     end if
-
 
     ! Check if any values are less than zero
     valid_probs = all(env_state%prob_advection(:,:,:,i_class) >= 0.0d0)

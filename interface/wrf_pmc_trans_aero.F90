@@ -68,7 +68,7 @@ contains
     !> Full domain of aerosol states.
     type(aero_state_t), dimension(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je), &
          intent(inout) :: aero_states
-     !> Number of grid cells for entire domain in west-east direction.
+    !> Number of grid cells for entire domain in west-east direction.
     integer, intent(in) :: global_nx
     !> Number of grid cells for entire domain in north-south direction.
     integer, intent(in) :: global_ny
@@ -1134,19 +1134,6 @@ contains
     !> Full domain of aerosol states.
     type(aero_state_t), dimension(pmc_is:pmc_ie,pmc_ks:pmc_ke,pmc_js:pmc_je), &
          intent(inout) :: aero_states
-!    integer, intent(in) :: is,ie,js,je,ks,ke
-!    !> Starting PartMC index in east-west direction.
-!    integer, intent(in) :: pmc_is
-!    !> Ending PartMC index in east-west direction.
-!    integer, intent(in) :: pmc_ie
-!    !> Starting PartMC index in vertical direction.
-!    integer, intent(in) :: pmc_ks
-!    !> Ending PartMC index in vertical direction.
-!    integer, intent(in) :: pmc_ke
-!    !> Starting PartMC index in north-south direction.
-!    integer, intent(in) :: pmc_js
-!    !> Ending PartMC index in north-south direction.
-!    integer, intent(in) :: pmc_je
     !> Number of mass points in east-west direction.
     integer, intent(in) :: global_nx
     !> Number of mass points in the north-south direction.
@@ -1368,9 +1355,6 @@ contains
 #endif
 
     ! Compare new and old number concentrations per class and group
-!    if (pmc_mpi_rank() == 981) then
-!    print*, 'starting the rebalance'
-!    end if
     do j = pmc_js,pmc_je
     do k = pmc_ks,pmc_ke
     do i = pmc_is,pmc_ie
@@ -1378,11 +1362,6 @@ contains
     do i_class = 1,n_class
       n_parts_new = num_conc_new(i,k,j,i_group,i_class) / &
            aero_states(i,k,j)%awa%weight(i_group, i_class)%magnitude !&
-!      if (pmc_mpi_rank() == 981) then
-!         print*, i,k,j,i_class,i_group, num_conc_new(i,k,j,i_group,i_class), &
-!              num_conc_old(i,k,j,i_group,i_class), n_parts_new, aero_states(i,k,j)%awa%weight(i_group, i_class)%magnitude
-!      end if
-!           / env_states(i,k,j)%rrho
       if (n_parts_new > 2.0d0 * &
          aero_states(i,k,j)%n_part_ideal(i_group, i_class)) then
          weight_ratio = n_parts_new / &
@@ -1390,33 +1369,12 @@ contains
          call aero_state_scale_weight(aero_states(i,k,j), &
               aero_data, i_group, &
               i_class, weight_ratio, .true., .true.)
-!         if (pmc_mpi_rank() == 981) then
-!         print*, 'adjusting', i,k,j, i_group, i_class, weight_ratio, &
-!              aero_state_total_particles(aero_states(i,k,j), i_group, i_class)
-!         end if
       end if
     end do
     end do
     end do
     end do
     end do
-
-!    if (pmc_mpi_rank() == 981) then
-!    print*, 'looping over cells after balancing'
-!    do j = pmc_js,pmc_je
-!    do k = pmc_ks,pmc_ke
-!    do i = pmc_is,pmc_ie
-!    do i_group = 1,n_group
-!    do i_class = 1,n_class
-!        print*, i,k,j, aero_states(i,k,j)%awa%weight(i_group, i_class)%magnitude, &
-!            aero_state_total_particles(aero_states(i,k,j), i_group, i_class), &
-!            num_conc_new(i,k,j,i_group,i_class)
-!    end do
-!    end do
-!    end do
-!    end do
-!    end do
-!    end if
 
     expected_num_conc = num_conc_new
 
@@ -1441,7 +1399,7 @@ contains
     integer, intent(in) :: pmc_ks
     !> PartMC top-bottom end of domain.
     integer, intent(in) :: pmc_ke
-    !> FIXME:
+    !> Extents of array dimensions including ghost cells.
     integer, intent(in) :: is,ie,js,je,ks,ke
     !> WRF grid.
     type(domain), intent(inout) :: grid
@@ -1451,22 +1409,21 @@ contains
     type(env_state_t), intent(in) :: env_state
     !> Number concentrations at time t+dt.
     real(kind=dp), intent(inout), dimension(is:ie,ks:ke,js:je) :: num_conc_new
-    !> 
+    !> Number of mass points in east-west direction.
     integer, intent(in) :: global_nx
-    !>
+    !> Number of mass points in the north-south direction.
     integer, intent(in) :: global_ny
-    !>
+    !> Number of mass points in the vertical direction.
     integer, intent(in) :: global_nz
     !> Environmental states
     type(env_state_t), dimension(is:ie,ks:ke,js:je), &
          intent(in) :: env_states
     !> Logical flag for periodic boundary conditions
     logical, intent(in) :: ideal
-    !>
+    !> Weight group index.
     integer, intent(in) :: i_group
-    !>
+    !> Weight class index.
     integer, intent(in) :: i_class
-
 
     integer :: i_index, j_index, k_index
     integer :: i,j,k, i_part
@@ -1934,7 +1891,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !>
+  !> General debugging for a single aerosol state.
   subroutine aero_state_debug(aero_state, max_group, max_class)
 
     type(aero_state_t), intent(in) :: aero_state
@@ -1967,7 +1924,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !>
+  !> General debugging of a column of aerosol states.
   subroutine aero_states_debug(aero_states, pmc_is, pmc_ie, pmc_ks, pmc_ke, &
        pmc_js, pmc_je)
 
@@ -2057,9 +2014,11 @@ contains
     !> Action for removal (see pmc_aero_info module for action
     !> parameters). Set to AERO_INFO_NONE to not log removal.
     integer, intent(in) :: removal_action
+    !> Environmental state of the source grid cell.
     type(env_state_t), intent(in) :: env_state_from
+    !> Environmental state of the destination grid cell.
     type(env_state_t), intent(in) :: env_state_to
-    !>
+    !> Weight class to sample.
     integer, intent(in) :: i_class
 
     integer :: n_transfer, i_transfer
@@ -2177,7 +2136,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !>
+  !> Samples particles from an aero_state for a given weight class.
   subroutine aero_state_sample_particles_by_class(aero_state_from, &
        aero_state_to, aero_data, sample_prob, removal_action, &
        rrho_source, rrho_dest, dz_source, dz_dest, i_class)
@@ -2197,7 +2156,9 @@ contains
     real(kind=dp), intent(in) :: rrho_source
     !> Inverse density of destination aero_state.
     real(kind=dp), intent(in) :: rrho_dest
+    !> Source grid cell thickness.
     real(kind=dp), intent(in) :: dz_source
+    !> Destination grid cell thickness.
     real(kind=dp), intent(in) :: dz_dest
     !> Weight class to sample.
     integer, intent(in) :: i_class

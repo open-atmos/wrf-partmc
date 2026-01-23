@@ -1587,23 +1587,23 @@ contains
       pmc_ke, global_nx, global_ny, global_nz, is, ie, js, je, ks, ke, &
       config_flags)
 
-    !>
+    !> PartMC east-west start of domain.
     integer, intent(in) :: pmc_is
-    !>
+    !> PartMC east-west end of domain.
     integer, intent(in) :: pmc_ie
-    !>
+    !> PartMC north-south start of domain.
     integer, intent(in) :: pmc_js
-    !>
+    !> PartMC north-south end of domain.
     integer, intent(in) :: pmc_je
-    !>
+    !> PartMC top-bottom start of domain.
     integer, intent(in) :: pmc_ks
-    !>
+    !> PartMC top-bottom end of domain.
     integer, intent(in) :: pmc_ke
-    !>
+    !> Number of mass points in east-west direction.
     integer, intent(in) :: global_nx
-    !>
+    !> Number of mass points in the north-south direction.
     integer, intent(in) :: global_ny
-    !>
+    !> Number of mass points in the vertical direction.
     integer, intent(in) :: global_nz
     !>
     integer, intent(out) :: is
@@ -1894,11 +1894,16 @@ contains
   !> General debugging for a single aerosol state.
   subroutine aero_state_debug(aero_state, max_group, max_class)
 
+    !> Aerosol state.
     type(aero_state_t), intent(in) :: aero_state
+    !> Weight group with the most particles.
+    integer, intent(out) :: max_group
+    !> Weight class with the most particles.
+    integer, intent(out) :: max_class
 
     integer :: i_group, i_class
     integer :: n_group, n_class
-    integer :: max_val, max_group, max_class
+    integer :: max_val
     integer :: n_part
 
     n_group = aero_weight_array_n_group(aero_state%awa)

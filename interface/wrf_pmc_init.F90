@@ -151,7 +151,7 @@ contains
        call spec_file_close(sub_file)
 
        call get_sources_and_weights(input_aero_data, grid%partmc_ics, &
-            grid%partmc_bcs, grid%partmc_emissions, &
+            grid%partmc_bcs, grid%partmc_emissions, grid%do_emission, &
             config_flags%periodic_x .and. config_flags%periodic_y)
 
        ! Get the maximum pack size
@@ -1269,7 +1269,7 @@ contains
 
   !> Read the number of sources for aerosols from input files.
   subroutine get_sources_and_weights(aero_data, prefix_ics, &
-       prefix_bcs, prefix_emissions, periodic_bcs)
+       prefix_bcs, prefix_emissions, do_emission, periodic_bcs)
 
     !> Aerosol data.
     type(aero_data_t), intent(inout) :: aero_data
@@ -1281,6 +1281,8 @@ contains
     character(len=*), intent(in) :: prefix_emissions
     !> Whether or not boundary conditions are periodic.
     logical, intent(in) :: periodic_bcs
+    !> Whether or not emissions are active
+    logical, intent(in) :: do_emission
 
     integer :: ncid
     integer :: status
@@ -1348,67 +1350,70 @@ contains
        call pmc_nc_check(nf90_close(ncid))
     end if
 
-    write(file, '(a,a,i3.3,a,i3.3,a,i3.3,a)') &
-         trim(prefix_emissions),'_',i,'_',j,'_',k,'.nc'
-
-    call pmc_nc_open_read(file, ncid)
-    status = nf90_inq_dimid(ncid, "n_modes", dimid_n_modes)
-    call pmc_nc_check(nf90_Inquire_Dimension(ncid, dimid_n_modes, &
+    if (do_emission) then
+       write(file, '(a,a,i3.3,a,i3.3,a,i3.3,a)') &
+             trim(prefix_emissions),'_',i,'_',j,'_',k,'.nc'
+    
+       call pmc_nc_open_read(file, ncid)
+       status = nf90_inq_dimid(ncid, "n_modes", dimid_n_modes)
+       call pmc_nc_check(nf90_Inquire_Dimension(ncid, dimid_n_modes, &
          check_name, check_dim_size))
-    num_emit_modes = check_dim_size
+       num_emit_modes = check_dim_size
 
-    ! Read in strings
-    call pmc_nc_check(nf90_inq_varid(ncid, "aero_source", &
-         varid_aero_source))
-    call pmc_nc_check(nf90_get_att(ncid, varid_aero_source, "names", &
-         aero_source_names))
-    status = nf90_inq_dimid(ncid, "n_aero_sources", dimid_aero_source)
-    call pmc_nc_check(nf90_Inquire_Dimension(ncid, &
-         dimid_aero_source, name, n_source))
+       ! Read in strings
+       call pmc_nc_check(nf90_inq_varid(ncid, "aero_source", &
+          varid_aero_source))
+       call pmc_nc_check(nf90_get_att(ncid, varid_aero_source, "names", &
+          aero_source_names))
+       status = nf90_inq_dimid(ncid, "n_aero_sources", dimid_aero_source)
+       call pmc_nc_check(nf90_Inquire_Dimension(ncid, &
+          dimid_aero_source, name, n_source))
 
-    call ensure_string_array_size(source_name, n_source)
-    do i_source = 1,n_source
-       i_str = 1
-       do while ((aero_source_names(i_str:i_str) /= " ") &
-            .and. (aero_source_names(i_str:i_str) /= ","))
-          i_str = i_str + 1
+       call ensure_string_array_size(source_name, n_source)
+       do i_source = 1,n_source
+          i_str = 1
+          do while ((aero_source_names(i_str:i_str) /= " ") &
+                .and. (aero_source_names(i_str:i_str) /= ","))
+                i_str = i_str + 1
+          end do
+          call assert(990455704, i_str > 1)
+          source_name(i_source) = aero_source_names(1:(i_str-1))
+          aero_source_names = aero_source_names((i_str+1):)
        end do
-       call assert(990455704, i_str > 1)
-       source_name(i_source) = aero_source_names(1:(i_str-1))
-       aero_source_names = aero_source_names((i_str+1):)
-    end do
 
-    ! FIXME: This should be strings?
-    call pmc_nc_read_integer_1d(ncid, emission_weight_classes, &
-         "source_weight_class", .true.)
-    call pmc_nc_check(nf90_close(ncid))
-    call ensure_string_array_size(weight_name, num_emit_modes)
-    do i_emit = 1,num_emit_modes
-        write(weight_class,'(I3)') emission_weight_classes(i_emit)
-        weight_name(i_emit) = weight_class
-    end do
+       ! FIXME: This should be strings?
+       call pmc_nc_read_integer_1d(ncid, emission_weight_classes, &
+          "source_weight_class", .true.)
+       call pmc_nc_check(nf90_close(ncid))
+       call ensure_string_array_size(weight_name, num_emit_modes)
+       do i_emit = 1,num_emit_modes
+          write(weight_class,'(I3)') emission_weight_classes(i_emit)
+          weight_name(i_emit) = weight_class
+       end do
 
-    do i_source= 1,n_source
-       dummy = aero_data_source_by_name(aero_data, source_name(i_source))
-    end do
+       do i_source= 1,n_source
+          dummy = aero_data_source_by_name(aero_data, source_name(i_source))
+       end do
 
-    do i_emit = 1,num_emit_modes
-       dummy = aero_data_weight_class_by_name(aero_data, weight_name(i_emit))
-    end do
+       do i_emit = 1,num_emit_modes
+          dummy = aero_data_weight_class_by_name(aero_data, weight_name(i_emit))
+       end do
 
-    ! Hack to add another weight class for now
-    ! TODO: This assumption may changed as more modes are added per source.
-    do i_emit = 1,num_emit_modes
-       write(weight_class,'(I3,a)') emission_weight_classes(i_emit), 'accumulation'
-       dummy = aero_data_weight_class_by_name(aero_data, weight_class)
-    end do
+       ! Hack to add another weight class for now
+       ! TODO: This assumption may changed as more modes are added per source.
+       do i_emit = 1,num_emit_modes
+          write(weight_class,'(I3,a)') emission_weight_classes(i_emit), 'accumulation'
+          dummy = aero_data_weight_class_by_name(aero_data, weight_class)
+       end do
 
-    ! Added sea salt
-    do i_ss = 1,2
-       write(source_name_tmp,'(a,i2.2)') 'sea_salt_', i_ss
-       dummy = aero_data_weight_class_by_name(aero_data, source_name_tmp)
-       dummy = aero_data_source_by_name(aero_data, source_name_tmp)
-    end do
+       ! Added sea salt
+       do i_ss = 1,2
+          write(source_name_tmp,'(a,i2.2)') 'sea_salt_', i_ss
+          dummy = aero_data_weight_class_by_name(aero_data, source_name_tmp)
+          dummy = aero_data_source_by_name(aero_data, source_name_tmp)
+       end do
+
+    end if
 
   end subroutine get_sources_and_weights
 

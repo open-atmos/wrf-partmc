@@ -1979,8 +1979,6 @@ contains
     call pmc_nc_check(nf90_put_att(ncid, varid_aero_start_index, "description", &
          "index into aero_particle dimension of first particle in each grid cell"))
 
-    ! no good here.
-
     ! Environment state per cell
     call pmc_nc_check(nf90_def_var(ncid, "temperature", NF90_DOUBLE, &
          (/ dimid_n_cells /), varid_temperature))
@@ -2002,8 +2000,6 @@ contains
     call pmc_nc_check(nf90_def_var(ncid, "cell_volume", NF90_DOUBLE, &
          (/ dimid_n_cells /), varid_cell_volume))
     call pmc_nc_check(nf90_put_att(ncid, varid_cell_volume, "units", "m3"))
-
-    ! No good here.
 
     ! Gas
     call pmc_nc_check(nf90_def_var(ncid, "gas_mixing_ratio", NF90_DOUBLE, &

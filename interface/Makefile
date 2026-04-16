@@ -68,9 +68,7 @@ WRF_MODULES = \
   ../WRFV3/frame/module_domain.o \
   ../WRFV3/share/module_model_constants.o \
   ../WRFV3/frame/module_configure.o \
-  ../WRFV3/frame/module_state_description.o \
-  ../WRFV3/frame/module_domain.o \
-  ../WRFV3/frame/module_configure.o
+  ../WRFV3/frame/module_state_description.o
 
 OBJS = mem.o \
  
@@ -91,16 +89,16 @@ clean:
 
 # DEPENDENCIES : only dependencies after this line (don't remove the word DEPENDENCIES)
 
-wrf_pmc_trans_aero.o: $(WRF_MODULES)
+wrf_pmc_trans_aero.o: $(PMC_MODULES) $(WRF_MODULES)
 
-wrf_pmc_driver.o: $(WRF_MODULES)
+wrf_pmc_driver.o: $(PMC_MODULES) $(WRF_MODULES)
 
-wrf_pmc_trans.o: wrf_pmc_trans_aero.o wrf_pmc_dep.o $(WRF_MODULES)
+wrf_pmc_trans.o: wrf_pmc_trans_aero.o wrf_pmc_dep.o $(PMC_MODULES) $(WRF_MODULES)
 
-wrf_pmc_init.o: wrf_pmc_driver.o $(WRF_MODULES)
+wrf_pmc_init.o: wrf_pmc_driver.o $(PMC_MODULES) $(WRF_MODULES)
 
-wrf_pmc_dep.o: wrf_pmc_dep_aero.o $(WRF_MODULES)
+wrf_pmc_dep.o: wrf_pmc_dep_aero.o $(PMC_MODULES) $(WRF_MODULES)
 
-wrf_pmc_dep_aero.o:
+wrf_pmc_dep_aero.o: $(PMC_MODULES)
 
 mem.o:

@@ -2290,6 +2290,246 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !> Read a flat per-rank NetCDF file written by output_column_to_file_flat
+  !! and reconstruct the aero_state / gas_state / env_state 3D arrays for
+  !! this MPI rank. Same-rank restart: this rank reads its own rank file and
+  !! the domain decomposition must match the one used when writing.
+  subroutine input_column_from_file_flat(prefix, aero_data, aero_states, &
+       gas_data, gas_states, env_states, pmc_is, pmc_ie, pmc_js, pmc_je, &
+       nz, index)
+
+    !> Prefix of state file.
+    character(len=*), intent(in) :: prefix
+    !> Aerosol data.
+    type(aero_data_t), intent(in) :: aero_data
+    !> Array of aerosol states.
+    type(aero_state_t), dimension(pmc_is:pmc_ie, nz, pmc_js:pmc_je), &
+         intent(inout) :: aero_states
+    !> Gas data.
+    type(gas_data_t), intent(in) :: gas_data
+    !> Array of gas states.
+    type(gas_state_t), dimension(pmc_is:pmc_ie, nz, pmc_js:pmc_je), &
+         intent(inout) :: gas_states
+    !> Array of environment states.
+    type(env_state_t), dimension(pmc_is:pmc_ie, nz, pmc_js:pmc_je), &
+         intent(inout) :: env_states
+    !> PartMC east-west start of domain.
+    integer, intent(in) :: pmc_is
+    !> PartMC east-west end of domain.
+    integer, intent(in) :: pmc_ie
+    !> PartMC north-south start of domain.
+    integer, intent(in) :: pmc_js
+    !> PartMC north-south end of domain.
+    integer, intent(in) :: pmc_je
+    !> Number of vertical levels.
+    integer, intent(in) :: nz
+    !> Filename index to read.
+    integer, intent(in) :: index
+
+    character(len=len(prefix)+100) :: filename
+    integer :: ncid
+    integer :: i, j, k, i_cell, i_part, i_comp, i_group, i_class
+    integer :: n_cells, n_parts_cell, n_comps_cell
+    integer :: part_start, comp_start
+    integer :: n_gas_spec, n_group, n_class
+    integer(kind=8) :: file_next_id
+    logical :: have_optical
+    ! Arrays to read in per-cell data.
+    integer, allocatable :: cell_ix(:), cell_iy(:), cell_iz(:), &
+         n_parts_arr(:), aero_start_arr(:)
+    real(kind=dp), allocatable :: temperature(:), pressure(:), rel_humidity(:), &
+         z_min(:), z_max(:), inverse_density(:), cell_volume(:)
+    real(kind=dp), allocatable :: gas_mixing_ratio(:,:)
+    integer, allocatable :: weight_type(:,:,:)
+    real(kind=dp), allocatable :: weight_magnitude(:,:,:), weight_exponent(:,:,:)
+    real(kind=dp), allocatable :: aero_particle_mass(:,:)
+    real(kind=dp), allocatable :: aero_num_conc(:)
+    integer, allocatable :: aero_component_len(:), aero_component_start_ind(:)
+    integer, allocatable :: aero_particle_weight_group(:), &
+        aero_particle_weight_class(:)
+    integer, allocatable :: aero_water_hyst_leg(:)
+    integer(kind=8), allocatable :: aero_id(:)
+    real(kind=dp), allocatable :: aero_least_create_time(:), &
+         aero_greatest_create_time(:)
+    integer, allocatable :: aero_particle_n_primary_parts(:)
+    real(kind=dp), allocatable :: aero_absorb_cross_sect(:,:), &
+         aero_scatter_cross_sect(:,:), aero_asymmetry(:,:), &
+         aero_refract_shell_real(:,:), aero_refract_shell_imag(:,:), &
+         aero_refract_core_real(:,:), aero_refract_core_imag(:,:)
+    real(kind=dp), allocatable :: aero_core_vol(:)
+    integer, allocatable :: aero_component_particle_num(:)
+    integer, allocatable :: aero_component_source_num(:)
+    real(kind=dp), allocatable :: aero_component_create_time(:)
+
+    type(aero_particle_t) :: aero_particle
+
+#ifdef PMC_USE_WRF
+
+    write(filename,'(a,a,i4.4,a,i8.8,a)') trim(prefix), '_rank_', &
+         pmc_mpi_rank(), '_', index, '.nc'
+    call pmc_nc_open_read(filename, ncid)
+
+    ! Per-cell scalar arrays (n_cells)
+    call pmc_nc_read_integer_1d(ncid, cell_ix, "cell_ix")
+    call pmc_nc_read_integer_1d(ncid, cell_iy, "cell_iy")
+    call pmc_nc_read_integer_1d(ncid, cell_iz, "cell_iz")
+    call pmc_nc_read_integer_1d(ncid, n_parts_arr, "n_parts")
+    call pmc_nc_read_integer_1d(ncid, aero_start_arr, "aero_start_index")
+    call pmc_nc_read_real_1d(ncid, temperature, "temperature")
+    call pmc_nc_read_real_1d(ncid, pressure, "pressure")
+    call pmc_nc_read_real_1d(ncid, rel_humidity, "relative_humidity")
+    call pmc_nc_read_real_1d(ncid, z_min, "bottom_boundary_altitude")
+    call pmc_nc_read_real_1d(ncid, z_max, "top_boundary_altitude")
+    call pmc_nc_read_real_1d(ncid, inverse_density, "inverse_density")
+    call pmc_nc_read_real_1d(ncid, cell_volume, "cell_volume")
+    call pmc_nc_read_real_2d(ncid, gas_mixing_ratio, "gas_mixing_ratio")
+    call pmc_nc_read_integer_3d(ncid, weight_type, "weight_type")
+    call pmc_nc_read_real_3d(ncid, weight_magnitude, "weight_magnitude")
+    call pmc_nc_read_real_3d(ncid, weight_exponent, "weight_exponent")
+
+    n_cells = size(cell_ix)
+    n_gas_spec = size(gas_mixing_ratio, 2)
+    n_group = size(weight_type, 2)
+    n_class = size(weight_type, 3)
+
+    ! Particle-flat arrays (total_particles)
+    call pmc_nc_read_real_2d(ncid, aero_particle_mass, "aero_particle_mass")
+    call pmc_nc_read_real_1d(ncid, aero_num_conc, "aero_num_conc")
+    call pmc_nc_read_integer_1d(ncid, aero_component_len, "aero_component_len")
+    call pmc_nc_read_integer_1d(ncid, aero_component_start_ind, &
+         "aero_component_start_ind")
+    call pmc_nc_read_integer_1d(ncid, aero_particle_weight_group, &
+    "aero_particle_weight_group")
+    call pmc_nc_read_integer_1d(ncid, aero_particle_weight_class, &
+         "aero_particle_weight_class")
+    call pmc_nc_read_integer_1d(ncid, aero_water_hyst_leg, &
+         "aero_water_hyst_leg")
+    call pmc_nc_read_integer64_1d(ncid, aero_id, "aero_id")
+    call pmc_nc_read_real_1d(ncid, aero_least_create_time, &
+         "aero_least_create_time")
+    call pmc_nc_read_real_1d(ncid, aero_greatest_create_time, &
+         "aero_greatest_create_time")
+    call pmc_nc_read_integer_1d(ncid, aero_particle_n_primary_parts, &
+         "aero_particle_n_primary_parts")
+
+    ! Optical fields are only present when record_optical was .true. at write
+    call pmc_nc_read_real_2d(ncid, aero_absorb_cross_sect, &
+         "aero_absorb_cross_sect", must_be_present=.false.)
+    call pmc_nc_read_real_2d(ncid, aero_scatter_cross_sect, &
+         "aero_scatter_cross_sect", must_be_present=.false.)
+    call pmc_nc_read_real_2d(ncid, aero_asymmetry, "aero_asymmetry", &
+         must_be_present=.false.)
+    call pmc_nc_read_real_2d(ncid, aero_refract_shell_real, &
+         "aero_refract_shell_real", must_be_present=.false.)
+    call pmc_nc_read_real_2d(ncid, aero_refract_shell_imag, &
+         "aero_refract_shell_imag", must_be_present=.false.)
+    call pmc_nc_read_real_2d(ncid, aero_refract_core_real, &
+         "aero_refract_core_real", must_be_present=.false.)
+    call pmc_nc_read_real_2d(ncid, aero_refract_core_imag, &
+         "aero_refract_core_imag", must_be_present=.false.)
+    call pmc_nc_read_real_1d(ncid, aero_core_vol, "aero_core_vol", &
+         must_be_present=.false.)
+    have_optical = allocated(aero_absorb_cross_sect)
+
+    ! Component-flat arrays (total_components)
+    call pmc_nc_read_integer_1d(ncid, aero_component_particle_num, &
+         "aero_component_particle_num")
+    call pmc_nc_read_integer_1d(ncid, aero_component_source_num, &
+         "aero_component_source_num")
+    call pmc_nc_read_real_1d(ncid, aero_component_create_time, &
+         "aero_component_create_time")
+
+    ! Restore global next_id so new particles don't collide with restored ids
+    call pmc_nc_read_integer64(ncid, file_next_id, "next_id")
+    next_id = file_next_id
+
+    do i_cell = 1, n_cells
+       i = cell_ix(i_cell)
+       j = cell_iy(i_cell)
+       k = cell_iz(i_cell)
+
+       env_states(i,k,j)%cell_ix = i
+       env_states(i,k,j)%cell_iy = j
+       env_states(i,k,j)%cell_iz = k
+       env_states(i,k,j)%temp = temperature(i_cell)
+       env_states(i,k,j)%pressure = pressure(i_cell)
+       env_states(i,k,j)%rel_humid = rel_humidity(i_cell)
+       env_states(i,k,j)%z_min = z_min(i_cell)
+       env_states(i,k,j)%z_max = z_max(i_cell)
+       env_states(i,k,j)%inverse_density = inverse_density(i_cell)
+       env_states(i,k,j)%cell_volume = cell_volume(i_cell)
+
+       call gas_state_set_size(gas_states(i,k,j), n_gas_spec)
+       gas_states(i,k,j)%mix_rat = gas_mixing_ratio(i_cell, :)
+
+       call aero_state_zero(aero_states(i,k,j))
+       do i_group = 1,n_group
+          do i_class = 1,n_class
+             aero_states(i,k,j)%awa%weight(i_group,i_class)%type = &
+                  weight_type(i_cell, i_group, i_class)
+             aero_states(i,k,j)%awa%weight(i_group,i_class)%magnitude = &
+                  weight_magnitude(i_cell, i_group, i_class)
+             aero_states(i,k,j)%awa%weight(i_group,i_class)%exponent  = &
+                  weight_exponent (i_cell, i_group, i_class)
+          end do
+       end do
+       call aero_state_set_n_part_ideal(aero_states(i,k,j), 0d0)
+
+       n_parts_cell = n_parts_arr(i_cell)
+       if (n_parts_cell == 0) cycle
+
+       part_start = aero_start_arr(i_cell)
+       do i_part = 0, n_parts_cell - 1
+          call aero_particle_zero(aero_particle, aero_data)
+          aero_particle%vol = aero_particle_mass(part_start + i_part, :) &
+               / aero_data%density
+          aero_particle%n_primary_parts = &
+               aero_particle_n_primary_parts(part_start + i_part)
+
+          n_comps_cell = aero_component_len(part_start + i_part)
+          if (allocated(aero_particle%component)) &
+               deallocate(aero_particle%component)
+          allocate(aero_particle%component(n_comps_cell))
+          comp_start = aero_component_start_ind(part_start + i_part)
+          do i_comp = 1, n_comps_cell
+             aero_particle%component(i_comp)%source_id = &
+                  aero_component_source_num (comp_start + i_comp - 1)
+             aero_particle%component(i_comp)%create_time = &
+                  aero_component_create_time(comp_start + i_comp - 1)
+          end do
+
+          aero_particle%weight_group = aero_particle_weight_group(part_start + i_part)
+          aero_particle%weight_class = aero_particle_weight_class(part_start + i_part)
+          aero_particle%water_hyst_leg = aero_water_hyst_leg(part_start + i_part)
+          aero_particle%id = aero_id(part_start + i_part)
+          aero_particle%least_create_time = aero_least_create_time(part_start + i_part)
+          aero_particle%greatest_create_time = aero_greatest_create_time(part_start + i_part)
+
+          if (have_optical) then
+             aero_particle%absorb_cross_sect = aero_absorb_cross_sect(part_start + i_part, :)
+             aero_particle%scatter_cross_sect = aero_scatter_cross_sect(part_start + i_part, :)
+             aero_particle%asymmetry = aero_asymmetry(part_start + i_part, :)
+             aero_particle%refract_shell = cmplx( &
+                  aero_refract_shell_real(part_start + i_part, :), &
+                  aero_refract_shell_imag(part_start + i_part, :), kind=dc)
+             aero_particle%refract_core = cmplx( &
+                  aero_refract_core_real(part_start + i_part, :), &
+                  aero_refract_core_imag(part_start + i_part, :), kind=dc)
+             aero_particle%core_vol = aero_core_vol(part_start + i_part)
+          end if
+
+          call aero_state_add_particle(aero_states(i,k,j), aero_particle, aero_data)
+       end do
+    end do
+
+    call pmc_nc_close(ncid)
+
+#endif
+
+  end subroutine input_column_from_file_flat
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   !> Write a single NetCDF index file on rank 0 mapping every global (x,z,y)
   !! cell to the MPI rank file that contains its data and the 1D flat index
   !! needed to locate that cell's records within the rank file.

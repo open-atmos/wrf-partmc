@@ -291,13 +291,12 @@ contains
        end do
        end do
     else
-       do j = j_start,j_end
-       do i = i_start,i_end
-          call init_read_in_restart(aero_states(i,:,j), gas_states(i,:,j), i, &
-               j, pmc_ke, aero_data, gas_data, config_flags%partmc_restart_prefix, &
-               config_flags%partmc_restart_index)
-       end do
-       end do
+       ! Rank-level restart reader (one file per MPI rank, matches
+       ! output_column_to_file_flat / METHOD_RANK_FLAT in partmc_output).
+       call input_column_from_file_flat(config_flags%partmc_restart_prefix, &
+            aero_data, aero_states, gas_data, gas_states, env_states, &
+            pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ke, &
+            config_flags%partmc_restart_index)
     end if
 
     time_ic = MPI_Wtime() - t1
@@ -1061,6 +1060,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !> Should be deleted when happy with new output and input formats.
   subroutine init_read_in_restart(aero_states, gas_states, i, j, nz, &
        aero_data, gas_data, partmc_restart_prefix, partmc_restart_index)
 
@@ -2070,13 +2070,12 @@ contains
 
        ! If we are a restart
        if (config_flags%do_restart) then
-          do j = pmc_js,pmc_je
-          do i = pmc_is,pmc_ie
-             call init_read_in_restart(aero_states(i,:,j), gas_states(i,:,j), i, j, &
-                  pmc_ke, aero_data, gas_data, config_flags%partmc_restart_prefix, &
-                  config_flags%partmc_restart_index)
-          end do
-          end do
+          ! Rank-level restart reader (one file per MPI rank, matches
+          ! output_column_to_file_flat / METHOD_RANK_FLAT in partmc_output).
+          call input_column_from_file_flat(config_flags%partmc_restart_prefix, &
+               aero_data, aero_states, gas_data, gas_states, env_states, &
+               pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ke, &
+               config_flags%partmc_restart_index)
        end if
 
     else

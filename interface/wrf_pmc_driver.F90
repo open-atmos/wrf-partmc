@@ -550,9 +550,9 @@ contains
     ! and performance; delete the other methods when happy with the winner.
     ! file-per-column via upstream output_column_to_file (needs tmp arrays)
     integer, parameter :: METHOD_COLUMN_ORIG = 1
-    ! file-per-column via output_column_to_file_new (pre-flattened particles)
-    integer, parameter :: METHOD_COLUMN_NEW  = 2
-    ! file-per-rank via output_column_to_file_flat (bulk hyperslab, single redef)
+    ! file-per-column via output_column_to_file_flat (pre-flattened particles)
+    integer, parameter :: METHOD_COLUMN_FLAT  = 2
+    ! file-per-rank via output_columns_to_file_flat (bulk hyperslab, single redef)
     integer, parameter :: METHOD_RANK_FLAT   = 3
     integer, parameter :: method = METHOD_RANK_FLAT
 
@@ -578,8 +578,7 @@ contains
                   record_removals, record_optical, uuid)
           end do
           end do
-
-       case (METHOD_COLUMN_NEW)
+       case (METHOD_COLUMN_FLAT)
           do j = max(pmc_js,1), min(pmc_je, global_ny)
           do i = max(pmc_is,1), min(pmc_ie, global_nx)
              do k = 1,global_nz
@@ -587,7 +586,7 @@ contains
                 env_states_tmp(k)  = env_states(i,k,j)
                 gas_states_tmp(k)  = gas_states(i,k,j)
              end do
-             call output_column_to_file_new(prefix, aero_data, &
+             call output_column_to_file_flat(prefix, aero_data, &
                   aero_states_tmp, gas_data, &
                   gas_states_tmp, &
                   env_states_tmp, global_nz, &
@@ -595,16 +594,14 @@ contains
                   record_removals, record_optical, uuid)
           end do
           end do
-
        case (METHOD_RANK_FLAT)
-          call output_column_to_file_flat(prefix, aero_data, &
+          call output_columns_to_file_flat(prefix, aero_data, &
                aero_states, gas_data, &
                gas_states, &
                env_states, pmc_is, pmc_ie, pmc_js, pmc_je, &
                global_nx, global_ny, global_nz, &
                output_index, time, del_t, i_repeat, &
                record_removals, record_optical, uuid)
-
        case default
           call die_msg(472108539, "partmc_output: unknown method = " &
                // trim(integer_to_string(method)))
@@ -1337,7 +1334,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  subroutine output_column_to_file_new(prefix, aero_data, aero_state, gas_data, &
+  subroutine output_column_to_file_flat(prefix, aero_data, aero_state, gas_data, &
        gas_state, env_state, nz, index, time, del_t, i_repeat, &
        record_removals, record_optical, uuid, write_rank, write_n_proc)
 
@@ -1703,7 +1700,7 @@ contains
     call pmc_nc_check(nf90_close(ncid))
 #endif
 
-  end subroutine output_column_to_file_new
+  end subroutine output_column_to_file_flat
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1713,7 +1710,7 @@ contains
   !! are written per-cell via hyperslab writes to avoid large allocations.
   !! cell_start_index and aero_start_index are computed in a first pass
   !! and used consistently in all subsequent loops to ensure correct indexing.
-  subroutine output_column_to_file_flat(prefix, aero_data, aero_states, gas_data, &
+  subroutine output_columns_to_file_flat(prefix, aero_data, aero_states, gas_data, &
        gas_states, env_states, pmc_is, pmc_ie, pmc_js, pmc_je, global_nx, global_ny, nz, &
        index, time, del_t, i_repeat, record_removals, record_optical, uuid, &
        write_rank, write_n_proc)
@@ -2286,15 +2283,15 @@ contains
 
 #endif
 
-  end subroutine output_column_to_file_flat
+  end subroutine output_columns_to_file_flat
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !> Read a flat per-rank NetCDF file written by output_column_to_file_flat
+  !> Read a flat per-rank NetCDF file written by output_columns_to_file_flat
   !! and reconstruct the aero_state / gas_state / env_state 3D arrays for
   !! this MPI rank. Same-rank restart: this rank reads its own rank file and
   !! the domain decomposition must match the one used when writing.
-  subroutine input_column_from_file_flat(prefix, aero_data, aero_states, &
+  subroutine input_columns_from_file_flat(prefix, aero_data, aero_states, &
        gas_data, gas_states, env_states, pmc_is, pmc_ie, pmc_js, pmc_je, &
        nz, index, n_part_ideal)
 
@@ -2528,7 +2525,7 @@ contains
 
 #endif
 
-  end subroutine input_column_from_file_flat
+  end subroutine input_columns_from_file_flat
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

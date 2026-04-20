@@ -292,8 +292,8 @@ contains
        end do
     else
        ! Rank-level restart reader (one file per MPI rank, matches
-       ! output_column_to_file_flat / METHOD_RANK_FLAT in partmc_output).
-       call input_column_from_file_flat(config_flags%partmc_restart_prefix, &
+       ! output_columns_to_file_flat / METHOD_RANK_FLAT in partmc_output).
+       call input_columns_from_file_flat(config_flags%partmc_restart_prefix, &
             aero_data, aero_states, gas_data, gas_states, env_states, &
             pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ke, &
             config_flags%partmc_restart_index, n_parts)
@@ -2076,8 +2076,8 @@ contains
        ! If we are a restart
        if (config_flags%do_restart) then
           ! Rank-level restart reader (one file per MPI rank, matches
-          ! output_column_to_file_flat / METHOD_RANK_FLAT in partmc_output).
-          call input_column_from_file_flat(config_flags%partmc_restart_prefix, &
+          ! output_columns_to_file_flat / METHOD_RANK_FLAT in partmc_output).
+          call input_columns_from_file_flat(config_flags%partmc_restart_prefix, &
                aero_data, aero_states, gas_data, gas_states, env_states, &
                pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ke, &
                config_flags%partmc_restart_index, n_parts)

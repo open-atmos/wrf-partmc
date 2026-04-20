@@ -542,15 +542,17 @@ contains
     integer :: ncid
     logical :: first
 
+    ! Remove when we remove the other output methods as METHOD_RANK_FLAT
+    ! does not require these temporary arrays.
     type(aero_state_t) :: aero_states_tmp(global_nz)
     type(gas_state_t) :: gas_states_tmp(global_nz)
     type(env_state_t) :: env_states_tmp(global_nz)
     integer :: batch_size, b, my_batch, local_size
     ! Output method selector. Experimental paths being compared for correctness
-    ! and performance; delete the other methods when happy with the winner.
-    ! file-per-column via upstream output_column_to_file (needs tmp arrays)
+    ! and performance; delete the other methods when happy with METHOD_RANK_FLAT.
+    ! file-per-column via output_column_to_file
     integer, parameter :: METHOD_COLUMN_ORIG = 1
-    ! file-per-column via output_column_to_file_flat (pre-flattened particles)
+    ! file-per-column via output_column_to_file_flat (flattened particle arrays)
     integer, parameter :: METHOD_COLUMN_FLAT  = 2
     ! file-per-rank via output_columns_to_file_flat (bulk hyperslab, single redef)
     integer, parameter :: METHOD_RANK_FLAT   = 3
@@ -571,10 +573,8 @@ contains
                 gas_states_tmp(k)  = gas_states(i,k,j)
              end do
              call output_column_to_file(prefix, aero_data, &
-                  aero_states_tmp, gas_data, &
-                  gas_states_tmp, &
-                  env_states_tmp, global_nz, &
-                  output_index, time, del_t, i_repeat, &
+                  aero_states_tmp, gas_data, gas_states_tmp, env_states_tmp, &
+                  global_nz, output_index, time, del_t, i_repeat, &
                   record_removals, record_optical, uuid)
           end do
           end do
@@ -587,18 +587,15 @@ contains
                 gas_states_tmp(k)  = gas_states(i,k,j)
              end do
              call output_column_to_file_flat(prefix, aero_data, &
-                  aero_states_tmp, gas_data, &
-                  gas_states_tmp, &
-                  env_states_tmp, global_nz, &
-                  output_index, time, del_t, i_repeat, &
+                  aero_states_tmp, gas_data, gas_states_tmp, env_states_tmp, &
+                  global_nz, output_index, time, del_t, i_repeat, &
                   record_removals, record_optical, uuid)
           end do
           end do
        case (METHOD_RANK_FLAT)
           call output_columns_to_file_flat(prefix, aero_data, &
-               aero_states, gas_data, &
-               gas_states, &
-               env_states, pmc_is, pmc_ie, pmc_js, pmc_je, &
+               aero_states, gas_data, gas_states, env_states, &
+               pmc_is, pmc_ie, pmc_js, pmc_je, &
                global_nx, global_ny, global_nz, &
                output_index, time, del_t, i_repeat, &
                record_removals, record_optical, uuid)
@@ -1334,6 +1331,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !> Output a single column to a NetCDF file in a flat array format.
   subroutine output_column_to_file_flat(prefix, aero_data, aero_state, gas_data, &
        gas_state, env_state, nz, index, time, del_t, i_repeat, &
        record_removals, record_optical, uuid, write_rank, write_n_proc)
@@ -1844,9 +1842,9 @@ contains
     ! ===========================================================
 
     n_cells = 0
-    do j = max(pmc_js,1), min(pmc_je, global_ny)
-    do i = max(pmc_is,1), min(pmc_ie, global_nx)
-    do k = 1, nz
+    do j = max(pmc_js,1),min(pmc_je, global_ny)
+    do i = max(pmc_is,1),min(pmc_ie, global_nx)
+    do k = 1,nz
        n_cells = n_cells + 1
     end do
     end do
@@ -1874,8 +1872,8 @@ contains
     i_cell = 0
     total_particles  = 0
     total_components = 0
-    do j = max(pmc_js,1), min(pmc_je, global_ny)
-    do i = max(pmc_is,1), min(pmc_ie, global_nx)
+    do j = max(pmc_js,1),min(pmc_je, global_ny)
+    do i = max(pmc_is,1),min(pmc_ie, global_nx)
     do k = 1, nz
        i_cell = i_cell + 1
        cell_start_index(i, k, j) = i_cell
@@ -1895,8 +1893,8 @@ contains
        inverse_density(i_cell) = env_states(i, k, j)%inverse_density
        cell_volume(i_cell) = env_states(i, k, j)%cell_volume
        gas_mixing_ratio(i_cell, :) = gas_states(i, k, j)%mix_rat
-       do i_group = 1, n_group
-       do i_class = 1, n_class
+       do i_group = 1,n_group
+       do i_class = 1,n_class
           weight_type(i_cell, i_group, i_class) = &
                aero_states(i, k, j)%awa%weight(i_group, i_class)%type
           weight_magnitude(i_cell, i_group, i_class) = &
@@ -2115,9 +2113,9 @@ contains
     deallocate(weight_type, weight_magnitude, weight_exponent)
 
     ! Per-cell hyperslab writes — same loop order as pass 1
-    do j = max(pmc_js,1), min(pmc_je, global_ny)
-    do i = max(pmc_is,1), min(pmc_ie, global_nx)
-    do k = 1, nz
+    do j = max(pmc_js,1),min(pmc_je, global_ny)
+    do i = max(pmc_is,1),min(pmc_ie, global_nx)
+    do k = 1,nz
        n_parts_cell = aero_state_n_part(aero_states(i, k, j))
        n_comps_cell = aero_state_total_n_components(aero_states(i, k, j))
        if (n_parts_cell == 0) cycle
@@ -2149,7 +2147,7 @@ contains
 
        ! Pack particle data for this cell
        local_comp_start = 1
-       do i_part = 1, n_parts_cell
+       do i_part = 1,n_parts_cell
           tmp_mass(i_part, :) = &
                aero_states(i,k,j)%apa%particle(i_part)%vol * aero_data%density
           tmp_comp_len(i_part) = aero_particle_n_components( &

@@ -1279,10 +1279,10 @@ contains
     character(len=*), intent(in) :: prefix_bcs
     !> File prefix of emissions.
     character(len=*), intent(in) :: prefix_emissions
+    !> Whether or not emissions are active.
+    logical, intent(in) :: do_emission
     !> Whether or not boundary conditions are periodic.
     logical, intent(in) :: periodic_bcs
-    !> Whether or not emissions are active
-    logical, intent(in) :: do_emission
 
     integer :: ncid
     integer :: status

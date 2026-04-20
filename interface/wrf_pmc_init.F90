@@ -296,7 +296,7 @@ contains
        call input_column_from_file_flat(config_flags%partmc_restart_prefix, &
             aero_data, aero_states, gas_data, gas_states, env_states, &
             pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ke, &
-            config_flags%partmc_restart_index)
+            config_flags%partmc_restart_index, n_parts)
     end if
 
     time_ic = MPI_Wtime() - t1
@@ -2075,7 +2075,7 @@ contains
           call input_column_from_file_flat(config_flags%partmc_restart_prefix, &
                aero_data, aero_states, gas_data, gas_states, env_states, &
                pmc_is, pmc_ie, pmc_js, pmc_je, pmc_ke, &
-               config_flags%partmc_restart_index)
+               config_flags%partmc_restart_index, n_parts)
        end if
 
     else

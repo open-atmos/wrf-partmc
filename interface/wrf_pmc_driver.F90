@@ -1778,34 +1778,34 @@ contains
     integer, allocatable :: comp_start_index(:,:,:)
 
     ! Scalar flat arrays (n_cells), assembled in pass 1
-    integer,          allocatable :: cell_ix_arr(:), cell_iy_arr(:), cell_iz_arr(:)
-    integer,          allocatable :: n_parts_arr(:), aero_start_arr(:)
-    real(kind=dp),    allocatable :: temperature(:), pressure(:), rel_humidity(:)
-    real(kind=dp),    allocatable :: z_min(:), z_max(:)
-    real(kind=dp),    allocatable :: inverse_density(:), cell_volume(:)
-    real(kind=dp),    allocatable :: gas_mixing_ratio(:,:)   ! (n_cells, n_gas_spec)
-    integer,          allocatable :: weight_type(:,:,:)      ! (n_cells, n_group, n_class)
-    real(kind=dp),    allocatable :: weight_magnitude(:,:,:)
-    real(kind=dp),    allocatable :: weight_exponent(:,:,:)
+    integer, allocatable :: cell_ix_arr(:), cell_iy_arr(:), cell_iz_arr(:)
+    integer, allocatable :: n_parts_arr(:), aero_start_arr(:)
+    real(kind=dp), allocatable :: temperature(:), pressure(:), rel_humidity(:)
+    real(kind=dp), allocatable :: z_min(:), z_max(:)
+    real(kind=dp), allocatable :: inverse_density(:), cell_volume(:)
+    real(kind=dp), allocatable :: gas_mixing_ratio(:,:)   ! (n_cells, n_gas_spec)
+    integer, allocatable :: weight_type(:,:,:)      ! (n_cells, n_group, n_class)
+    real(kind=dp), allocatable :: weight_magnitude(:,:,:)
+    real(kind=dp), allocatable :: weight_exponent(:,:,:)
 
     ! Per-cell temporaries for hyperslab particle writes
-    real(kind=dp),    allocatable :: tmp_mass(:,:)
-    real(kind=dp),    allocatable :: tmp_num_conc(:)
-    integer,          allocatable :: tmp_comp_len(:)
-    integer,          allocatable :: tmp_comp_start(:)
-    integer,          allocatable :: tmp_weight_group(:), tmp_weight_class(:)
-    integer,          allocatable :: tmp_hyst_leg(:)
-    integer(kind=8),  allocatable :: tmp_id(:)
-    real(kind=dp),    allocatable :: tmp_least_create(:), tmp_greatest_create(:)
-    integer,          allocatable :: tmp_n_primary(:)
-    integer,          allocatable :: tmp_comp_particle_num(:)
-    integer,          allocatable :: tmp_comp_source_num(:)
-    real(kind=dp),    allocatable :: tmp_comp_create_time(:)
-    real(kind=dp),    allocatable :: tmp_absorb(:,:), tmp_scatter(:,:)
-    real(kind=dp),    allocatable :: tmp_asymm(:,:)
-    real(kind=dp),    allocatable :: tmp_refract_shell_r(:,:), tmp_refract_shell_i(:,:)
-    real(kind=dp),    allocatable :: tmp_refract_core_r(:,:),  tmp_refract_core_i(:,:)
-    real(kind=dp),    allocatable :: tmp_core_vol(:)
+    real(kind=dp), allocatable :: tmp_mass(:,:)
+    real(kind=dp), allocatable :: tmp_num_conc(:)
+    integer, allocatable :: tmp_comp_len(:)
+    integer, allocatable :: tmp_comp_start(:)
+    integer, allocatable :: tmp_weight_group(:), tmp_weight_class(:)
+    integer, allocatable :: tmp_hyst_leg(:)
+    integer(kind=8), allocatable :: tmp_id(:)
+    real(kind=dp), allocatable :: tmp_least_create(:), tmp_greatest_create(:)
+    integer, allocatable :: tmp_n_primary(:)
+    integer, allocatable :: tmp_comp_particle_num(:)
+    integer, allocatable :: tmp_comp_source_num(:)
+    real(kind=dp), allocatable :: tmp_comp_create_time(:)
+    real(kind=dp), allocatable :: tmp_absorb(:,:), tmp_scatter(:,:)
+    real(kind=dp), allocatable :: tmp_asymm(:,:)
+    real(kind=dp), allocatable :: tmp_refract_shell_r(:,:), tmp_refract_shell_i(:,:)
+    real(kind=dp), allocatable :: tmp_refract_core_r(:,:),  tmp_refract_core_i(:,:)
+    real(kind=dp), allocatable :: tmp_core_vol(:)
 
     ! NetCDF dimension IDs
     integer :: dimid_n_cells, dimid_gas_species, dimid_aero_species
@@ -1888,15 +1888,15 @@ contains
        cell_ix_arr(i_cell) = env_states(i, k, j)%cell_ix
        cell_iy_arr(i_cell) = env_states(i, k, j)%cell_iy
        cell_iz_arr(i_cell) = env_states(i, k, j)%cell_iz
-       n_parts_arr(i_cell)     = aero_state_n_part(aero_states(i, k, j))
-       aero_start_arr(i_cell)  = aero_start_index(i, k, j)
-       temperature(i_cell)     = env_states(i, k, j)%temp
-       pressure(i_cell)        = env_states(i, k, j)%pressure
-       rel_humidity(i_cell)    = env_states(i, k, j)%rel_humid
-       z_min(i_cell)           = env_states(i, k, j)%z_min
-       z_max(i_cell)           = env_states(i, k, j)%z_max
+       n_parts_arr(i_cell)  = aero_state_n_part(aero_states(i, k, j))
+       aero_start_arr(i_cell) = aero_start_index(i, k, j)
+       temperature(i_cell) = env_states(i, k, j)%temp
+       pressure(i_cell) = env_states(i, k, j)%pressure
+       rel_humidity(i_cell) = env_states(i, k, j)%rel_humid
+       z_min(i_cell) = env_states(i, k, j)%z_min
+       z_max(i_cell) = env_states(i, k, j)%z_max
        inverse_density(i_cell) = env_states(i, k, j)%inverse_density
-       cell_volume(i_cell)     = env_states(i, k, j)%cell_volume
+       cell_volume(i_cell) = env_states(i, k, j)%cell_volume
        gas_mixing_ratio(i_cell, :) = gas_states(i, k, j)%mix_rat
        do i_group = 1, n_group
        do i_class = 1, n_class
@@ -1909,7 +1909,7 @@ contains
        end do
        end do
 
-       total_particles  = total_particles  + aero_state_n_part(aero_states(i, k, j))
+       total_particles = total_particles + aero_state_n_part(aero_states(i, k, j))
        total_components = total_components + &
             aero_state_total_n_components(aero_states(i, k, j))
     end do
@@ -2092,23 +2092,23 @@ contains
     !         hyperslab writes for particle/component arrays
     ! ===========================================================
 
-    call pmc_nc_check(nf90_put_var(ncid, varid_cell_ix,         cell_ix_arr))
-    call pmc_nc_check(nf90_put_var(ncid, varid_cell_iy,         cell_iy_arr))
-    call pmc_nc_check(nf90_put_var(ncid, varid_cell_iz,         cell_iz_arr))
-    call pmc_nc_check(nf90_put_var(ncid, varid_n_parts,         n_parts_arr))
+    call pmc_nc_check(nf90_put_var(ncid, varid_cell_ix, cell_ix_arr))
+    call pmc_nc_check(nf90_put_var(ncid, varid_cell_iy, cell_iy_arr))
+    call pmc_nc_check(nf90_put_var(ncid, varid_cell_iz, cell_iz_arr))
+    call pmc_nc_check(nf90_put_var(ncid, varid_n_parts, n_parts_arr))
     call pmc_nc_check(nf90_put_var(ncid, varid_aero_start_index,aero_start_arr))
-    call pmc_nc_check(nf90_put_var(ncid, varid_temperature,     temperature))
-    call pmc_nc_check(nf90_put_var(ncid, varid_pressure,        pressure))
-    call pmc_nc_check(nf90_put_var(ncid, varid_rel_humidity,    rel_humidity))
-    call pmc_nc_check(nf90_put_var(ncid, varid_z_min,           z_min))
-    call pmc_nc_check(nf90_put_var(ncid, varid_z_max,           z_max))
-    call pmc_nc_check(nf90_put_var(ncid, varid_inverse_density,  inverse_density))
-    call pmc_nc_check(nf90_put_var(ncid, varid_cell_volume,      cell_volume))
+    call pmc_nc_check(nf90_put_var(ncid, varid_temperature, temperature))
+    call pmc_nc_check(nf90_put_var(ncid, varid_pressure, pressure))
+    call pmc_nc_check(nf90_put_var(ncid, varid_rel_humidity, rel_humidity))
+    call pmc_nc_check(nf90_put_var(ncid, varid_z_min, z_min))
+    call pmc_nc_check(nf90_put_var(ncid, varid_z_max, z_max))
+    call pmc_nc_check(nf90_put_var(ncid, varid_inverse_density, inverse_density))
+    call pmc_nc_check(nf90_put_var(ncid, varid_cell_volume, cell_volume))
     call pmc_nc_check(nf90_put_var(ncid, varid_gas_mixing_ratio, gas_mixing_ratio))
-    call pmc_nc_check(nf90_put_var(ncid, varid_weight_type,      weight_type))
-    call pmc_nc_check(nf90_put_var(ncid, varid_weight_magnitude,  weight_magnitude))
-    call pmc_nc_check(nf90_put_var(ncid, varid_weight_exponent,   weight_exponent))
-    call pmc_nc_check(nf90_put_var(ncid, varid_next_id,           next_id))
+    call pmc_nc_check(nf90_put_var(ncid, varid_weight_type, weight_type))
+    call pmc_nc_check(nf90_put_var(ncid, varid_weight_magnitude, weight_magnitude))
+    call pmc_nc_check(nf90_put_var(ncid, varid_weight_exponent, weight_exponent))
+    call pmc_nc_check(nf90_put_var(ncid, varid_next_id, next_id))
 
     deallocate(cell_ix_arr, cell_iy_arr, cell_iz_arr)
     deallocate(n_parts_arr, aero_start_arr)
@@ -2296,7 +2296,7 @@ contains
   !! the domain decomposition must match the one used when writing.
   subroutine input_column_from_file_flat(prefix, aero_data, aero_states, &
        gas_data, gas_states, env_states, pmc_is, pmc_ie, pmc_js, pmc_je, &
-       nz, index)
+       nz, index, n_part_ideal)
 
     !> Prefix of state file.
     character(len=*), intent(in) :: prefix
@@ -2325,6 +2325,8 @@ contains
     integer, intent(in) :: nz
     !> Filename index to read.
     integer, intent(in) :: index
+    !> Target number of computational particles per cell.
+    real(kind=dp), intent(in) :: n_part_ideal
 
     character(len=len(prefix)+100) :: filename
     integer :: ncid
@@ -2335,8 +2337,8 @@ contains
     integer(kind=8) :: file_next_id
     logical :: have_optical
     ! Arrays to read in per-cell data.
-    integer, allocatable :: cell_ix(:), cell_iy(:), cell_iz(:), &
-         n_parts_arr(:), aero_start_arr(:)
+    integer, allocatable :: cell_ix(:), cell_iy(:), cell_iz(:)
+    integer, allocatable :: n_parts_arr(:), aero_start_arr(:)
     real(kind=dp), allocatable :: temperature(:), pressure(:), rel_humidity(:), &
          z_min(:), z_max(:), inverse_density(:), cell_volume(:)
     real(kind=dp), allocatable :: gas_mixing_ratio(:,:)
@@ -2473,7 +2475,7 @@ contains
                   weight_exponent (i_cell, i_group, i_class)
           end do
        end do
-       call aero_state_set_n_part_ideal(aero_states(i,k,j), 0d0)
+       call aero_state_set_n_part_ideal(aero_states(i,k,j), n_part_ideal)
 
        n_parts_cell = n_parts_arr(i_cell)
        if (n_parts_cell == 0) cycle
@@ -2586,13 +2588,17 @@ contains
     if (pmc_mpi_rank() == 0) then
        call MPI_Reduce(MPI_IN_PLACE, g_rank, size(g_rank), &
             MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+       call pmc_mpi_check_ierr(ierr)
        call MPI_Reduce(MPI_IN_PLACE, g_cell_idx, size(g_cell_idx), &
             MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+       call pmc_mpi_check_ierr(ierr)
     else
        call MPI_Reduce(g_rank, g_rank, size(g_rank), &
             MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+       call pmc_mpi_check_ierr(ierr)
        call MPI_Reduce(g_cell_idx, g_cell_idx, size(g_cell_idx), &
             MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+       call pmc_mpi_check_ierr(ierr)
     end if
 #endif
 

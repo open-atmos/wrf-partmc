@@ -1108,6 +1108,10 @@ contains
     real(kind=dp), allocatable :: aero_refract_core_imag(:,:)
     real(kind=dp), allocatable :: aero_core_vol(:)
     integer, allocatable :: aero_water_hyst_leg(:)
+    integer, allocatable :: aero_frozen(:)
+    real(kind=dp), allocatable :: aero_imf_temperature(:)
+    real(kind=dp), allocatable :: aero_den_ice(:)
+    real(kind=dp), allocatable :: aero_ice_shape_phi(:)
     real(kind=dp), allocatable :: aero_num_conc(:)
     integer(kind=8), allocatable :: aero_id(:)
     real(kind=dp), allocatable :: aero_least_create_time(:)
@@ -1154,6 +1158,14 @@ contains
          "aero_particle_weight_class")
     call pmc_nc_read_integer_1d(ncid, aero_water_hyst_leg, &
          "aero_water_hyst_leg")
+    call pmc_nc_read_integer_1d(ncid, aero_frozen, &
+         "aero_frozen", must_be_present=.false.)
+    call pmc_nc_read_real_1d(ncid, aero_imf_temperature, &
+         "aero_imf_temperature", must_be_present=.false.)
+    call pmc_nc_read_real_1d(ncid, aero_den_ice, &
+         "aero_den_ice", must_be_present=.false.)
+    call pmc_nc_read_real_1d(ncid, aero_ice_shape_phi, &
+         "aero_ice_shape_phi", must_be_present=.false.)
     call pmc_nc_read_real_1d(ncid, aero_num_conc, &
          "aero_num_conc")
     call pmc_nc_read_integer64_1d(ncid, aero_id, "aero_id")
@@ -1247,6 +1259,18 @@ contains
           aero_particle%core_vol = aero_core_vol(i_part)
        end if
        aero_particle%water_hyst_leg = aero_water_hyst_leg(i_part)
+       if (allocated(aero_frozen)) then
+          aero_particle%frozen = (aero_frozen(i_part) /= 0)
+       end if
+       if (allocated(aero_imf_temperature)) then
+          aero_particle%imf_temperature = aero_imf_temperature(i_part)
+       end if
+       if (allocated(aero_den_ice)) then
+          aero_particle%den_ice = aero_den_ice(i_part)
+       end if
+       if (allocated(aero_ice_shape_phi)) then
+          aero_particle%ice_shape_phi = aero_ice_shape_phi(i_part)
+       end if
        aero_particle%id = aero_id(i_part)
        aero_particle%least_create_time = aero_least_create_time(i_part)
        aero_particle%greatest_create_time = aero_greatest_create_time(i_part)

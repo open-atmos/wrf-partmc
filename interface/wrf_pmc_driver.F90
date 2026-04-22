@@ -1397,6 +1397,10 @@ contains
     real(kind=dp), allocatable :: aero_refract_core_imag(:,:)
     real(kind=dp), allocatable :: aero_core_vol(:)
     integer, allocatable :: aero_water_hyst_leg(:)
+    integer, allocatable :: aero_frozen(:)
+    real(kind=dp), allocatable :: aero_imf_temperature(:)
+    real(kind=dp), allocatable :: aero_den_ice(:)
+    real(kind=dp), allocatable :: aero_ice_shape_phi(:)
     real(kind=dp), allocatable :: aero_num_conc(:)
     integer(kind=8), allocatable :: aero_id(:)
     real(kind=dp), allocatable :: aero_least_create_time(:)
@@ -1442,6 +1446,10 @@ contains
     allocate(aero_particle_weight_group(total_particles))
     allocate(aero_particle_weight_class(total_particles))
     allocate(aero_water_hyst_leg(total_particles))
+    allocate(aero_frozen(total_particles))
+    allocate(aero_imf_temperature(total_particles))
+    allocate(aero_den_ice(total_particles))
+    allocate(aero_ice_shape_phi(total_particles))
     allocate(aero_id(total_particles))
     allocate(aero_least_create_time(total_particles))
     allocate(aero_greatest_create_time(total_particles))
@@ -1484,6 +1492,17 @@ contains
                = aero_state(k)%apa%particle(i_part)%weight_class
           aero_water_hyst_leg(i_part_g) &
                = aero_state(k)%apa%particle(i_part)%water_hyst_leg
+          if (aero_state(k)%apa%particle(i_part)%frozen) then
+             aero_frozen(i_part_g) = 1
+          else
+             aero_frozen(i_part_g) = 0
+          end if
+          aero_imf_temperature(i_part_g) &
+               = aero_state(k)%apa%particle(i_part)%imf_temperature
+          aero_den_ice(i_part_g) &
+               = aero_state(k)%apa%particle(i_part)%den_ice
+          aero_ice_shape_phi(i_part_g) &
+               = aero_state(k)%apa%particle(i_part)%ice_shape_phi
           aero_num_conc(i_part_g) &
                = aero_state_particle_num_conc(aero_state(k), &
                aero_state(k)%apa%particle(i_part), aero_data)
@@ -1590,6 +1609,19 @@ contains
          "aero_water_hyst_leg", (/ dimid_aero_particle /), &
          long_name="leg of the water hysteresis curve leg of each "&
          // "aerosol particle")
+    call pmc_nc_write_integer_1d(ncid, aero_frozen, &
+         "aero_frozen", (/ dimid_aero_particle /), &
+         long_name="ice-phase flag of each aerosol particle " &
+         // "(1 if frozen, 0 if liquid)")
+    call pmc_nc_write_real_1d(ncid, aero_imf_temperature, &
+         "aero_imf_temperature", (/ dimid_aero_particle /), unit="K", &
+         long_name="immersion freezing temperature of each aerosol particle")
+    call pmc_nc_write_real_1d(ncid, aero_den_ice, &
+         "aero_den_ice", (/ dimid_aero_particle /), unit="kg m^{-3}", &
+         long_name="ice density of each aerosol particle")
+    call pmc_nc_write_real_1d(ncid, aero_ice_shape_phi, &
+         "aero_ice_shape_phi", (/ dimid_aero_particle /), unit="1", &
+         long_name="ice shape parameter of each aerosol particle")
     call pmc_nc_write_real_1d(ncid, aero_num_conc, &
          "aero_num_conc", (/ dimid_aero_particle /), unit="m^{-3}", &
          long_name="number concentration for each particle")
@@ -1790,6 +1822,10 @@ contains
     integer, allocatable :: tmp_comp_start(:)
     integer, allocatable :: tmp_weight_group(:), tmp_weight_class(:)
     integer, allocatable :: tmp_hyst_leg(:)
+    integer, allocatable :: tmp_frozen(:)
+    real(kind=dp), allocatable :: tmp_imf_temperature(:)
+    real(kind=dp), allocatable :: tmp_den_ice(:)
+    real(kind=dp), allocatable :: tmp_ice_shape_phi(:)
     integer(kind=8), allocatable :: tmp_id(:)
     real(kind=dp), allocatable :: tmp_least_create(:), tmp_greatest_create(:)
     integer, allocatable :: tmp_n_primary(:)
@@ -1819,6 +1855,10 @@ contains
     integer :: varid_aero_component_len, varid_aero_component_start_ind
     integer :: varid_aero_particle_weight_group, varid_aero_particle_weight_class
     integer :: varid_aero_water_hyst_leg
+    integer :: varid_aero_frozen
+    integer :: varid_aero_imf_temperature
+    integer :: varid_aero_den_ice
+    integer :: varid_aero_ice_shape_phi
     integer :: varid_aero_id
     integer :: varid_aero_least_create_time, varid_aero_greatest_create_time
     integer :: varid_aero_particle_n_primary_parts
@@ -2018,6 +2058,19 @@ contains
          (/ dimid_aero_particle /), varid_aero_particle_weight_class))
     call pmc_nc_check(nf90_def_var(ncid, "aero_water_hyst_leg", NF90_INT, &
          (/ dimid_aero_particle /), varid_aero_water_hyst_leg))
+    call pmc_nc_check(nf90_def_var(ncid, "aero_frozen", NF90_INT, &
+         (/ dimid_aero_particle /), varid_aero_frozen))
+    call pmc_nc_check(nf90_put_att(ncid, varid_aero_frozen, "description", &
+         "ice-phase flag (1 if frozen, 0 if liquid)"))
+    call pmc_nc_check(nf90_def_var(ncid, "aero_imf_temperature", NF90_DOUBLE, &
+         (/ dimid_aero_particle /), varid_aero_imf_temperature))
+    call pmc_nc_check(nf90_put_att(ncid, varid_aero_imf_temperature, "units", "K"))
+    call pmc_nc_check(nf90_def_var(ncid, "aero_den_ice", NF90_DOUBLE, &
+         (/ dimid_aero_particle /), varid_aero_den_ice))
+    call pmc_nc_check(nf90_put_att(ncid, varid_aero_den_ice, "units", "kg m^{-3}"))
+    call pmc_nc_check(nf90_def_var(ncid, "aero_ice_shape_phi", NF90_DOUBLE, &
+         (/ dimid_aero_particle /), varid_aero_ice_shape_phi))
+    call pmc_nc_check(nf90_put_att(ncid, varid_aero_ice_shape_phi, "units", "1"))
     call pmc_nc_check(nf90_def_var(ncid, "aero_id", NF90_INT64, &
          (/ dimid_aero_particle /), varid_aero_id))
     call pmc_nc_check(nf90_def_var(ncid, "aero_least_create_time", NF90_DOUBLE, &
@@ -2127,6 +2180,10 @@ contains
        allocate(tmp_weight_group(n_parts_cell))
        allocate(tmp_weight_class(n_parts_cell))
        allocate(tmp_hyst_leg(n_parts_cell))
+       allocate(tmp_frozen(n_parts_cell))
+       allocate(tmp_imf_temperature(n_parts_cell))
+       allocate(tmp_den_ice(n_parts_cell))
+       allocate(tmp_ice_shape_phi(n_parts_cell))
        allocate(tmp_id(n_parts_cell))
        allocate(tmp_least_create(n_parts_cell))
        allocate(tmp_greatest_create(n_parts_cell))
@@ -2167,6 +2224,15 @@ contains
           tmp_weight_group(i_part)  = aero_states(i,k,j)%apa%particle(i_part)%weight_group
           tmp_weight_class(i_part)  = aero_states(i,k,j)%apa%particle(i_part)%weight_class
           tmp_hyst_leg(i_part)      = aero_states(i,k,j)%apa%particle(i_part)%water_hyst_leg
+          if (aero_states(i,k,j)%apa%particle(i_part)%frozen) then
+             tmp_frozen(i_part) = 1
+          else
+             tmp_frozen(i_part) = 0
+          end if
+          tmp_imf_temperature(i_part) = &
+               aero_states(i,k,j)%apa%particle(i_part)%imf_temperature
+          tmp_den_ice(i_part) = aero_states(i,k,j)%apa%particle(i_part)%den_ice
+          tmp_ice_shape_phi(i_part) = aero_states(i,k,j)%apa%particle(i_part)%ice_shape_phi
           tmp_num_conc(i_part)      = aero_state_particle_num_conc(aero_states(i,k,j), &
                aero_states(i,k,j)%apa%particle(i_part), aero_data)
           tmp_id(i_part)            = aero_states(i,k,j)%apa%particle(i_part)%id
@@ -2210,6 +2276,14 @@ contains
             tmp_weight_class, start=s1, count=c1))
        call pmc_nc_check(nf90_put_var(ncid, varid_aero_water_hyst_leg, &
             tmp_hyst_leg, start=s1, count=c1))
+       call pmc_nc_check(nf90_put_var(ncid, varid_aero_frozen, &
+            tmp_frozen, start=s1, count=c1))
+       call pmc_nc_check(nf90_put_var(ncid, varid_aero_imf_temperature, &
+            tmp_imf_temperature, start=s1, count=c1))
+       call pmc_nc_check(nf90_put_var(ncid, varid_aero_den_ice, &
+            tmp_den_ice, start=s1, count=c1))
+       call pmc_nc_check(nf90_put_var(ncid, varid_aero_ice_shape_phi, &
+            tmp_ice_shape_phi, start=s1, count=c1))
        call pmc_nc_check(nf90_put_var(ncid, varid_aero_id, &
             tmp_id, start=s1, count=c1))
        call pmc_nc_check(nf90_put_var(ncid, varid_aero_least_create_time, &
@@ -2258,6 +2332,7 @@ contains
 
        deallocate(tmp_mass, tmp_num_conc, tmp_comp_len, tmp_comp_start)
        deallocate(tmp_weight_group, tmp_weight_class, tmp_hyst_leg)
+       deallocate(tmp_frozen, tmp_imf_temperature, tmp_den_ice, tmp_ice_shape_phi)
        deallocate(tmp_id, tmp_least_create, tmp_greatest_create, tmp_n_primary)
        deallocate(tmp_comp_particle_num, tmp_comp_source_num, tmp_comp_create_time)
        if (record_optical) then
@@ -2345,6 +2420,10 @@ contains
     integer, allocatable :: aero_particle_weight_group(:), &
         aero_particle_weight_class(:)
     integer, allocatable :: aero_water_hyst_leg(:)
+    integer, allocatable :: aero_frozen(:)
+    real(kind=dp), allocatable :: aero_imf_temperature(:)
+    real(kind=dp), allocatable :: aero_den_ice(:)
+    real(kind=dp), allocatable :: aero_ice_shape_phi(:)
     integer(kind=8), allocatable :: aero_id(:)
     real(kind=dp), allocatable :: aero_least_create_time(:), &
          aero_greatest_create_time(:)
@@ -2401,6 +2480,14 @@ contains
          "aero_particle_weight_class")
     call pmc_nc_read_integer_1d(ncid, aero_water_hyst_leg, &
          "aero_water_hyst_leg")
+    call pmc_nc_read_integer_1d(ncid, aero_frozen, &
+         "aero_frozen", must_be_present=.false.)
+    call pmc_nc_read_real_1d(ncid, aero_imf_temperature, &
+         "aero_imf_temperature", must_be_present=.false.)
+    call pmc_nc_read_real_1d(ncid, aero_den_ice, &
+         "aero_den_ice", must_be_present=.false.)
+    call pmc_nc_read_real_1d(ncid, aero_ice_shape_phi, &
+         "aero_ice_shape_phi", must_be_present=.false.)
     call pmc_nc_read_integer64_1d(ncid, aero_id, "aero_id")
     call pmc_nc_read_real_1d(ncid, aero_least_create_time, &
          "aero_least_create_time")
@@ -2498,6 +2585,18 @@ contains
           aero_particle%weight_group = aero_particle_weight_group(part_start + i_part)
           aero_particle%weight_class = aero_particle_weight_class(part_start + i_part)
           aero_particle%water_hyst_leg = aero_water_hyst_leg(part_start + i_part)
+          if (allocated(aero_frozen)) then
+             aero_particle%frozen = (aero_frozen(part_start + i_part) /= 0)
+          end if
+          if (allocated(aero_imf_temperature)) then
+             aero_particle%imf_temperature = aero_imf_temperature(part_start + i_part)
+          end if
+          if (allocated(aero_den_ice)) then
+             aero_particle%den_ice = aero_den_ice(part_start + i_part)
+          end if
+          if (allocated(aero_ice_shape_phi)) then
+             aero_particle%ice_shape_phi = aero_ice_shape_phi(part_start + i_part)
+          end if
           aero_particle%id = aero_id(part_start + i_part)
           aero_particle%least_create_time = aero_least_create_time(part_start + i_part)
           aero_particle%greatest_create_time = aero_greatest_create_time(part_start + i_part)

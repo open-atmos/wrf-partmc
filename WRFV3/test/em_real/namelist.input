@@ -165,7 +165,6 @@
  random_seed = 0,
  partmc_prefix_out = "./out/cares"
  partmc_prefix_in = "./",
- partmc_specfile = "./scenario.spec",
  partmc_emissions = "./aero_emit_dists/aero_emit_dists",
  partmc_bcs = "./bcs/bcs",
  partmc_ics = "./ics/ics_new",

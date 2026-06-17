@@ -4359,6 +4359,10 @@ SUBROUTINE advect_scalar   ( field, field_old, tendency,    &
 
   ENDDO
 
+   ELSE IF (vert_order == 0 ) THEN
+
+      ! Just in case we want to turn vertical advection off, we can do it
+
    ELSE
 
       WRITE (wrf_err_message,*) ' advect_scalar_6a, v_order not known ',vert_order
@@ -4470,8 +4474,8 @@ SUBROUTINE advect_w    ( w, w_old, tendency,            &
 !  set order for the advection scheme
 
   ktf=MIN(kte,kde-1)
-  horz_order = config_flags%h_sca_adv_order
-  vert_order = config_flags%v_sca_adv_order
+  horz_order = config_flags%h_mom_adv_order
+  vert_order = config_flags%v_mom_adv_order
 
 !  here is the choice of flux operators
 
@@ -12666,8 +12670,8 @@ SUBROUTINE advect_weno_w    ( w, w_old, tendency,            &
 !  set order for the advection scheme
 
   ktf=MIN(kte,kde-1)
-  horz_order = config_flags%h_sca_adv_order
-  vert_order = config_flags%v_sca_adv_order
+  horz_order = config_flags%h_mom_adv_order
+  vert_order = config_flags%v_mom_adv_order
 
 !  here is the choice of flux operators
 
